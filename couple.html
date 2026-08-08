@@ -123,7 +123,8 @@
             prixNetVendeur: 116000,
             fraisNotaireTaux: 7.5,
             taux: 3.6,
-            apport: 10000,
+            apportP1: 6000,
+            apportP2: 4000,
             taeg: 4.1,
             assuranceTauxAnnuel: 0.34,
             copro: 100,
@@ -156,8 +157,7 @@
         };
 
         let abonnementsVie = [
-            { nom: 'World of Warcraft', montant: 11.99 },
-            { nom: 'Salle de sport', montant: 30.00 }
+            { nom: 'World of Warcraft', montant: 11.99 }
         ];
 
         let abonnementsVieP2 = [
@@ -166,6 +166,7 @@
 
         let comptesDispo = [
             { nom: 'Compte Courant Boursorama', solde: 200, rendement: 0, versementMensuel: 0, virementExterne: 0, proprietaire: 'P1' },
+            { nom: 'Compte Courant Partenaire 2', solde: 150, rendement: 0, versementMensuel: 0, virementExterne: 0, proprietaire: 'P2' },
             { nom: 'Livret A', solde: 1, rendement: 1.7, versementMensuel: 0, virementExterne: 0, proprietaire: 'Commun' },
             { nom: 'LEP (Matelas Sécurité)', solde: 1550, rendement: 2.5, versementMensuel: 100, virementExterne: 0, proprietaire: 'P1' }
         ];
@@ -180,7 +181,11 @@
 
         let patrimoineSupplementaire = [
             { nom: 'Carte / Objets de collection', valeur: 700, proprietaire: 'Commun' },
-            { nom: 'Quiver de Kitesurf (Ail harnais barre pompe -2023-2024)', valeur: 1000, proprietaire: 'P1' }
+            { nom: 'Quiver de Kitesurf', valeur: 1000, proprietaire: 'P1' }
+        ];
+
+        let patrimoineSupplementaireP2 = [
+            { nom: 'Véhicule Partenaire 2', valeur: 5000, proprietaire: 'P2' }
         ];
 
         let snapshotDernierEnregistrement = null;
@@ -193,7 +198,8 @@
                 abonnementsVieP2: JSON.parse(JSON.stringify(abonnementsVieP2)),
                 comptesDispo: JSON.parse(JSON.stringify(comptesDispo)),
                 placementsBloques: JSON.parse(JSON.stringify(placementsBloques)),
-                patrimoineSupplementaire: JSON.parse(JSON.stringify(patrimoineSupplementaire))
+                patrimoineSupplementaire: JSON.parse(JSON.stringify(patrimoineSupplementaire)),
+                patrimoineSupplementaireP2: JSON.parse(JSON.stringify(patrimoineSupplementaireP2))
             };
             dernierMessageAlerte = "💾 Budget validé et enregistré comme référence pour le reset !";
         }
@@ -210,19 +216,28 @@
             comptesDispo = JSON.parse(JSON.stringify(snapshotDernierEnregistrement.comptesDispo));
             placementsBloques = JSON.parse(JSON.stringify(snapshotDernierEnregistrement.placementsBloques));
             patrimoineSupplementaire = JSON.parse(JSON.stringify(snapshotDernierEnregistrement.patrimoineSupplementaire));
+            patrimoineSupplementaireP2 = JSON.parse(JSON.stringify(snapshotDernierEnregistrement.patrimoineSupplementaireP2));
             dernierMessageAlerte = "↩️ Restauration effectuée : retour aux valeurs du dernier 'Mettre à jour le budget'.";
             render();
         }
 
-        function ajouterLignePatrimoineSupp() {
+        function ajouterLignePatrimoineSupp(partenaire = 1) {
             synchroniserDonneesDynamiques();
-            patrimoineSupplementaire.push({ nom: 'Nouvel Actif', valeur: 0, proprietaire: 'Commun' });
+            if(partenaire === 2) {
+                patrimoineSupplementaireP2.push({ nom: 'Nouvel Actif P2', valeur: 0, proprietaire: 'P2' });
+            } else {
+                patrimoineSupplementaire.push({ nom: 'Nouvel Actif', valeur: 0, proprietaire: 'Commun' });
+            }
             render();
         }
 
-        function supprimerLignePatrimoineSupp(index) {
+        function supprimerLignePatrimoineSupp(index, partenaire = 1) {
             synchroniserDonneesDynamiques();
-            patrimoineSupplementaire.splice(index, 1);
+            if(partenaire === 2) {
+                patrimoineSupplementaireP2.splice(index, 1);
+            } else {
+                patrimoineSupplementaire.splice(index, 1);
+            }
             render();
         }
 
@@ -364,6 +379,18 @@
                 }
             });
 
+            const rowsPatSuppP2 = document.querySelectorAll('#table-patsupp-p2 tr.row-patsupp-p2');
+            rowsPatSuppP2.forEach((row, i) => {
+                if (patrimoineSupplementaireP2[i]) {
+                    patrimoineSupplementaireP2[i].nom = row.querySelector('.inp-patsupp-nom').value;
+                    patrimoineSupplementaireP2[i].valeur = parseFloat(row.querySelector('.inp-patsupp-val').value) || 0;
+                    const selProp = row.querySelector('.inp-prop');
+                    if (selProp) {
+                        patrimoineSupplementaireP2[i].proprietaire = selProp.value;
+                    }
+                }
+            });
+
             const inputGoalSide = document.getElementById('inp-side-goal');
             if (inputGoalSide) {
                 cfg.objectifResteAVivre = parseFloat(inputGoalSide.value) || 0;
@@ -445,7 +472,8 @@
 
             const fraisNotaireCalculés = cfg.prixAnnonce * (cfg.fraisNotaireTaux / 100);
             const coutTotalProjet = cfg.prixAnnonce + fraisNotaireCalculés + cfg.travaux;
-            const capitalEmprunte = Math.max(0, (cfg.montantProjet > 0 ? cfg.montantProjet : coutTotalProjet) - cfg.apport);
+            const totalApportCumule = cfg.apportP1 + cfg.apportP2;
+            const capitalEmprunte = Math.max(0, (cfg.montantProjet > 0 ? cfg.montantProjet : coutTotalProjet) - totalApportCumule);
 
             let dureeCible = parseInt(cfg.optionCibleOptimisation) || 20;
             let tauxCible = cfg.taeg;
@@ -540,7 +568,8 @@
             
             const fraisNotaireCalculés = cfg.prixAnnonce * (cfg.fraisNotaireTaux / 100);
             const coutTotalProjetBase = cfg.prixAnnonce + fraisNotaireCalculés + cfg.travaux;
-            const capitalEmprunte = Math.max(0, (cfg.montantProjet > 0 ? cfg.montantProjet : coutTotalProjetBase) - cfg.apport);
+            const totalApportCumuleCalcul = cfg.apportP1 + cfg.apportP2;
+            const capitalEmprunte = Math.max(0, (cfg.montantProjet > 0 ? cfg.montantProjet : coutTotalProjetBase) - totalApportCumuleCalcul);
 
             const m10 = calculerPret(capitalEmprunte, cfg.taeg - 0.5, 10);
             const m15 = calculerPret(capitalEmprunte, cfg.taeg - 0.3, 15);
@@ -598,7 +627,21 @@
                             <option value="P2" ${item.proprietaire==='P2'?'selected':''}>P2</option>
                         </select>
                     </td>
-                    <td><button type="button" class="del-btn" onclick="supprimerLignePatrimoineSupp(${index})">Supprimer</button></td>
+                    <td><button type="button" class="del-btn" onclick="supprimerLignePatrimoineSupp(${index}, 1)">Supprimer</button></td>
+                </tr>`;
+            });
+
+            let tablePatSuppP2Html = '';
+            patrimoineSupplementaireP2.forEach((item, index) => {
+                tablePatSuppP2Html += `<tr class="row-patsupp-p2">
+                    <td><input type="text" value="${item.nom}" class="inp-patsupp-nom" style="background:#2a1215; border:1px solid #7f1d1d; color:white; padding:4px; width:100%;"></td>
+                    <td><input type="number" step="any" value="${item.valeur}" class="inp-patsupp-val" oninput="patrimoineSupplementaireP2[${index}].valeur = parseFloat(this.value) || 0;" style="background:#2a1215; border:1px solid #7f1d1d; color:white; padding:4px; width:100%;"></td>
+                    <td>
+                        <select class="inp-prop" style="background:#2a1215; border:1px solid #7f1d1d; color:white; padding:4px; width:100%;">
+                            <option value="P2" selected>P2</option>
+                        </select>
+                    </td>
+                    <td><button type="button" class="del-btn" onclick="supprimerLignePatrimoineSupp(${index}, 2)">Supprimer</button></td>
                 </tr>`;
             });
 
@@ -647,12 +690,20 @@
                             <div class="form-group"><label>Taux Frais Notaire (%)</label>${makeInput('fraisNotaireTaux', cfg.fraisNotaireTaux)}</div>
                             <div class="form-group"><label>Travaux (€)</label>${makeInput('travaux', cfg.travaux)}</div>
                             <div class="form-group"><label>Taux de base crédit (%)</label>${makeInput('taux', cfg.taux)}</div>
-                            <div class="form-group"><label>Apport Objectif (€)</label>${makeInput('apport', cfg.apport)}</div>
+                            <div class="form-group"><label>Apport P1 (€)</label>${makeInput('apportP1', cfg.apportP1)}</div>
                             <div class="form-group"><label>TAEG global (%)</label>${makeInput('taeg', cfg.taeg)}</div>
                             <div class="form-group"><label>Assurance emprunteur (%/an)</label>${makeInput('assuranceTauxAnnuel', cfg.assuranceTauxAnnuel)}</div>
                             <div class="form-group"><label>Charges Copropriété (€)</label>${makeInput('copro', cfg.copro)}</div>
                             <div class="form-group"><label>Taxe Foncière (€)</label>${makeInput('taxe', cfg.taxe)}</div>
                             <div class="form-group"><label>Montant Projet Cible Libre (€)</label>${makeInput('montantProjet', cfg.montantProjet)}</div>
+                        </div>
+                    </div>
+
+                    <div class="form-section-card partenaire2-card">
+                        <div class="form-section-title">🏡 2.bis Projet Immobilier - Apport Partenaire 2 (P2)</div>
+                        <div class="form-grid-inner">
+                            <div class="form-group"><label>Apport P2 (€)</label>${makeInput('apportP2', cfg.apportP2)}</div>
+                            <div class="form-group"><label>Apport Cumulés Couple (Calculé)</label><div class="input-wrapper"><input type="text" value="${(cfg.apportP1 + cfg.apportP2).toFixed(2)} €" readonly style="color:#f87171; font-weight:bold;"></div></div>
                         </div>
                     </div>
 
@@ -713,12 +764,23 @@
 
                     <div class="form-section-card">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                            <span style="color:#38bdf8; font-weight:bold; font-size:13px;">🎁 6. Patrimoine Supplémentaire (Cartes, art, véhicules...)</span>
-                            <button type="button" class="action-btn" onclick="ajouterLignePatrimoineSupp()" style="margin:0; padding:4px 8px; font-size:11px;">+ Ajouter un actif</button>
+                            <span style="color:#38bdf8; font-weight:bold; font-size:13px;">🎁 6. Patrimoine Supplémentaire P1 (Cartes, art, véhicules...)</span>
+                            <button type="button" class="action-btn" onclick="ajouterLignePatrimoineSupp(1)" style="margin:0; padding:4px 8px; font-size:11px;">+ Ajouter un actif P1</button>
                         </div>
                         <table id="table-patsupp" style="margin:0;">
                             <tr><th>Nom / Description</th><th>Valeur (€)</th><th>Propriétaire</th><th>Action</th></tr>
                             ${tablePatSuppHtml}
+                        </table>
+                    </div>
+
+                    <div class="form-section-card partenaire2-card">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <span style="color:#f87171; font-weight:bold; font-size:13px;">🎁 6.bis Patrimoine Supplémentaire P2 (Véhicules, objets...)</span>
+                            <button type="button" class="action-btn p2-btn" onclick="ajouterLignePatrimoineSupp(2)" style="margin:0; padding:4px 8px; font-size:11px;">+ Ajouter un actif P2</button>
+                        </div>
+                        <table id="table-patsupp-p2" style="margin:0;">
+                            <tr><th>Nom / Description</th><th>Valeur (€)</th><th>Propriétaire</th><th>Action</th></tr>
+                            ${tablePatSuppP2Html}
                         </table>
                     </div>
 
@@ -807,26 +869,31 @@
                 }
 
                 let totalPatrimoineSupp = patrimoineSupplementaire.reduce((acc, item) => acc + item.valeur, 0);
-                let patrimoineTotalInstantT = estimationReventeInstantT + totalDispo + totalBloque + totalPatrimoineSupp;
+                let totalPatrimoineSuppP2 = patrimoineSupplementaireP2.reduce((acc, item) => acc + item.valeur, 0);
+                let patrimoineTotalInstantT = estimationReventeInstantT + totalDispo + totalBloque + totalPatrimoineSupp + totalPatrimoineSuppP2;
 
                 // Calculs Individuels Partenaire 1 (P1)
                 let dispoP1 = comptesDispo.filter(c => c.proprietaire === 'P1').reduce((acc, c) => acc + c.solde, 0);
                 let bloqueP1 = placementsBloques.filter(p => p.proprietaire === 'P1').reduce((acc, p) => acc + p.solde, 0);
-                let patSuppP1 = patrimoineSupplementaire.filter(ps => ps.proprietaire === 'P1').reduce((acc, item) => acc + item.valeur, 0);
+                let patSuppP1 = patSuppP1 = patrimoineSupplementaire.filter(ps => ps.proprietaire === 'P1').reduce((acc, item) => acc + item.valeur, 0);
                 let immoP1 = cfg.possedeImmo ? (estimationReventeInstantT / 2) : 0;
                 let patrimoineTotalP1 = dispoP1 + bloqueP1 + patSuppP1 + immoP1;
 
                 // Calculs Individuels Partenaire 2 (P2)
                 let dispoP2 = comptesDispo.filter(c => c.proprietaire === 'P2').reduce((acc, c) => acc + c.solde, 0);
                 let bloqueP2 = placementsBloques.filter(p => p.proprietaire === 'P2').reduce((acc, p) => acc + p.solde, 0);
-                let patSuppP2 = patrimoineSupplementaire.filter(ps => ps.proprietaire === 'P2').reduce((acc, item) => acc + item.valeur, 0);
+                let patSuppP2 = totalPatrimoineSuppP2;
                 let immoP2 = cfg.possedeImmo ? (estimationReventeInstantT / 2) : 0;
                 let patrimoineTotalP2 = dispoP2 + bloqueP2 + patSuppP2 + immoP2;
 
-                // Part commune partagée en 50/50 pour les individus si besoin, ou affichée à part
+                // Part commune partagée (comptes et patrimoine commun)
                 let dispoCommun = comptesDispo.filter(c => c.proprietaire === 'Commun').reduce((acc, c) => acc + c.solde, 0);
                 let bloqueCommun = placementsBloques.filter(p => p.proprietaire === 'Commun').reduce((acc, p) => acc + p.solde, 0);
                 let patSuppCommun = patrimoineSupplementaire.filter(ps => ps.proprietaire === 'Commun').reduce((acc, item) => acc + item.valeur, 0);
+                
+                // Répartition 50/50 du commun ajoutée aux patrimoines individuels pour refléter la réalité du couple
+                patrimoineTotalP1 += (dispoCommun + bloqueCommun + patSuppCommun) / 2;
+                patrimoineTotalP2 += (dispoCommun + bloqueCommun + patSuppCommun) / 2;
 
                 const calculerFuturCompte = (soldeActuel, versementPerso, versementExterne, tauxAnnuel, annees) => {
                     let r = tauxAnnuel / 100 / 12;
@@ -848,9 +915,7 @@
                 let graphiquePointsInvestP1 = [];
                 let graphiquePointsInvestP2 = [];
                 let graphiquePointsCible = [];
-                let valeurInitialeTotale = totalDispo + totalBloque + totalPatrimoineSupp;
-                let valeurInitialeP1 = dispoP1 + bloqueP1 + patSuppP1;
-                let valeurInitialeP2 = dispoP2 + bloqueP2 + patSuppP2;
+                let valeurInitialeTotale = totalDispo + totalBloque + totalPatrimoineSupp + totalPatrimoineSuppP2;
 
                 let tousPlacements = [...placementsBloques, ...comptesDispo];
                 let placementsP1 = tousPlacements.filter(p => p.proprietaire === 'P1');
@@ -892,7 +957,7 @@
                         if (p.nom === cfg.depenseFuturCompteCible) s = Math.max(0, s - cfg.depenseFuturMontant);
                         sommeGlobalAn += calculerFuturCompte(s, p.versementMensuel || 0, p.virementExterne || 0, p.rendement, an);
                     });
-                    sommeGlobalAn += totalPatrimoineSupp;
+                    sommeGlobalAn += totalPatrimoineSupp + totalPatrimoineSuppP2;
                     graphiquePointsInvest.push(sommeGlobalAn);
                     graphiquePointsCible.push(valeurInitialeTotale * Math.pow(1.05, an) + (an * 5000));
 
@@ -902,7 +967,7 @@
                         if (p.nom === cfg.depenseFuturCompteCible) s = Math.max(0, s - cfg.depenseFuturMontant);
                         sommeP1An += calculerFuturCompte(s, p.versementMensuel || 0, p.virementExterne || 0, p.rendement, an);
                     });
-                    sommeP1An += patSuppP1;
+                    sommeP1An += patSuppP1 + ((dispoCommun + bloqueCommun + patSuppCommun) / 2);
                     graphiquePointsInvestP1.push(sommeP1An);
 
                     let sommeP2An = 0;
@@ -911,7 +976,7 @@
                         if (p.nom === cfg.depenseFuturCompteCible) s = Math.max(0, s - cfg.depenseFuturMontant);
                         sommeP2An += calculerFuturCompte(s, p.versementMensuel || 0, p.virementExterne || 0, p.rendement, an);
                     });
-                    sommeP2An += patSuppP2;
+                    sommeP2An += patSuppP2 + ((dispoCommun + bloqueCommun + patSuppCommun) / 2);
                     graphiquePointsInvestP2.push(sommeP2An);
                 });
 
@@ -932,7 +997,7 @@
                 let totalChargesVieActuelles = cfg.loyerActuel + cfg.loyerPartConjoint + cfg.internet + transportTotal + cfg.coursesP1 + cfg.coursesP2 + cfg.loisirsP1 + cfg.loisirsP2 + totalAbos1 + totalAbos2;
                 let capaciteEpargneActuelleLocataire = salaireNetTotal - totalChargesVieActuelles;
 
-                let objectifApport = cfg.apport;
+                let objectifApportCumule = cfg.apportP1 + cfg.apportP2;
                 
                 let moisNomsComplets = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
                 
@@ -944,14 +1009,14 @@
                     return `${moisNomsComplets[cibleMoisIdx]} ${cibleAnnee} (${nbMoisTotal} mois)`;
                 };
 
-                let manquantApportSeul = Math.max(0, objectifApport - epargneDispoActuelle);
+                let manquantApportSeul = Math.max(0, objectifApportCumule - epargneDispoActuelle);
                 let moisApportSeul = 0;
                 if (manquantApportSeul > 0 && capaciteEpargneActuelleLocataire > 0) {
                     moisApportSeul = Math.ceil(manquantApportSeul / capaciteEpargneActuelleLocataire);
                 }
                 let dateApportSeulStr = getMoisAnneeCibleStr(moisApportSeul);
 
-                let objectifAvecSecu = objectifApport + 2000;
+                let objectifAvecSecu = objectifApportCumule + 2000;
                 let manquantAvecSecu = Math.max(0, objectifAvecSecu - epargneDispoActuelle);
                 let moisAvecSecu = 0;
                 if (manquantAvecSecu > 0 && capaciteEpargneActuelleLocataire > 0) {
@@ -961,7 +1026,7 @@
 
                 let totalBloquesActuels = placementsBloques.reduce((acc, p) => acc + p.solde, 0);
                 let montantPiocherBloque = 0;
-                let cibleApportAvecSecuPiochage = epargneDispoActuelle >= objectifApport ? objectifApport + 2000 : objectifApport;
+                let cibleApportAvecSecuPiochage = epargneDispoActuelle >= objectifApportCumule ? objectifApportCumule + 2000 : objectifApportCumule;
                 let manquantTotalPiochage = Math.max(0, cibleApportAvecSecuPiochage - epargneDispoActuelle);
                 
                 if (manquantTotalPiochage > 0) {
@@ -1035,17 +1100,17 @@
                             <div style="background:#1e293b; padding:15px; border-radius:6px; border:2px solid #38bdf8; text-align:center;">
                                 <div style="font-size:12px; color:#94a3b8; text-transform:uppercase; font-weight:bold;">Patrimoine Global Couple</div>
                                 <div style="font-size: 26px; font-weight: 900; color: #4ade80; margin: 8px 0;">${patrimoineTotalInstantT.toFixed(2)} €</div>
-                                <div style="font-size: 11px; color: #cbd5e1;">Immo: ${estimationReventeInstantT.toFixed(0)}€ | Dispo: ${totalDispo.toFixed(0)}€ | Bloqué: ${totalBloque.toFixed(0)}€ | Supp: ${totalPatrimoineSupp.toFixed(0)}€</div>
+                                <div style="font-size: 11px; color: #cbd5e1;">Immo: ${estimationReventeInstantT.toFixed(0)}€ | Dispo: ${totalDispo.toFixed(0)}€ | Bloqué: ${totalBloque.toFixed(0)}€ | Supp P1: ${totalPatrimoineSupp.toFixed(0)}€ | Supp P2: ${totalPatrimoineSuppP2.toFixed(0)}€</div>
                             </div>
                             <div style="background:#18080a; padding:15px; border-radius:6px; border:2px solid #f87171; text-align:center;">
                                 <div style="font-size:12px; color:#fca5a5; text-transform:uppercase; font-weight:bold;">Patrimoine Partenaire 1 (P1)</div>
                                 <div style="font-size: 26px; font-weight: 900; color: #f87171; margin: 8px 0;">${patrimoineTotalP1.toFixed(2)} €</div>
-                                <div style="font-size: 11px; color: #cbd5e1;">Dispo: ${dispoP1.toFixed(0)}€ | Bloqué: ${bloqueP1.toFixed(0)}€ | Supp: ${patSuppP1.toFixed(0)}€ | Immo Part: ${immoP1.toFixed(0)}€</div>
+                                <div style="font-size: 11px; color: #cbd5e1;">Dispo: ${dispoP1.toFixed(0)}€ | Bloqué: ${bloqueP1.toFixed(0)}€ | Supp P1: ${patSuppP1.toFixed(0)}€ | Immo Part: ${immoP1.toFixed(0)}€</div>
                             </div>
                             <div style="background:#18080a; padding:15px; border-radius:6px; border:2px solid #f87171; text-align:center;">
                                 <div style="font-size:12px; color:#fca5a5; text-transform:uppercase; font-weight:bold;">Patrimoine Partenaire 2 (P2)</div>
                                 <div style="font-size: 26px; font-weight: 900; color: #f87171; margin: 8px 0;">${patrimoineTotalP2.toFixed(2)} €</div>
-                                <div style="font-size: 11px; color: #cbd5e1;">Dispo: ${dispoP2.toFixed(0)}€ | Bloqué: ${bloqueP2.toFixed(0)}€ | Supp: ${patSuppP2.toFixed(0)}€ | Immo Part: ${immoP2.toFixed(0)}€</div>
+                                <div style="font-size: 11px; color: #cbd5e1;">Dispo: ${dispoP2.toFixed(0)}€ | Bloqué: ${bloqueP2.toFixed(0)}€ | Supp P2: ${patSuppP2.toFixed(0)}€ | Immo Part: ${immoP2.toFixed(0)}€</div>
                             </div>
                         </div>
 
@@ -1079,12 +1144,12 @@
                     </div>
 
                     <div class="card" style="border: 2px solid #4ade80; background: #0f172a;">
-                        <h3 style="margin-top:0; color:#4ade80;">🎯 Stratégie d'Atteinte de l'Apport (Couple)</h3>
+                        <h3 style="margin-top:0; color:#4ade80;">🎯 Stratégie d'Atteinte de l'Apport (Cumul P1 + P2)</h3>
                         <div style="font-size: 12px; color: #cbd5e1; margin-bottom: 12px;">
                             Analyse basée sur vos loyers (${cfg.loyerActuel}€ + ${cfg.loyerPartConjoint}€), vos revenus cumulés (${salaireNetTotal.toFixed(2)}€ net) et vos comptes de liquidité.
                         </div>
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; font-size: 13px;">
-                            <div style="background:#1e293b; padding:12px; border-radius:6px;">Objectif d'Apport Cible : <br><b style="color:#38bdf8; font-size:1.2em;">${objectifApport.toFixed(2)} €</b></div>
+                            <div style="background:#1e293b; padding:12px; border-radius:6px;">Objectif d'Apport Cumulé : <br><b style="color:#38bdf8; font-size:1.2em;">${objectifApportCumule.toFixed(2)} €</b> (P1: ${cfg.apportP1}€ + P2: ${cfg.apportP2}€)</div>
                             <div style="background:#1e293b; padding:12px; border-radius:6px;">Épargne Disponible Actuelle : <br><b style="color:#4ade80; font-size:1.2em;">${epargneDispoActuelle.toFixed(2)} €</b></div>
                             <div style="background:#1e293b; padding:12px; border-radius:6px;">Capacité d'épargne mensuelle : <br><b style="color:#38bdf8; font-size:1.2em;">${capaciteEpargneActuelleLocataire.toFixed(2)} € / mois</b></div>
                             
@@ -1096,7 +1161,7 @@
                             <div style="background:#1e293b; padding:14px; border-radius:6px; grid-column: 1 / -1; border: 1px solid #4ade80;">
                                 <b style="color:#4ade80; font-size:1.1em; display:block; margin-bottom:6px;">📌 Scénario 2 : Avec l'argent non bloqué uniquement</b>
                                 <div style="margin-top:6px; font-size:13px;">
-                                    • Date estimée (Apport seul de ${objectifApport}€) : <b style="color:#38bdf8;">${dateApportSeulStr}</b><br>
+                                    • Date estimée (Apport cumulé de ${objectifApportCumule}€) : <b style="color:#38bdf8;">${dateApportSeulStr}</b><br>
                                     • <span style="color:#fcd34d;">💡 Conseil expert :</span> Avec <b style="color:#fcd34d;">2000€ de sécurité</b> en plus (${objectifAvecSecu}€) : <b style="color:#4ade80;">${dateAvecSecuStr}</b>
                                 </div>
                             </div>
@@ -1169,7 +1234,7 @@
                         </div>
                     </div>
 
-                    <!-- SECTION PATRIMOINE INDIVIDUEL P2 -->
+                    <!-- SECTION PATRIMOINE INDIVIDUEL P2 (Zone Rouge Modèle Ressource) -->
                     <div class="card" style="border: 2px solid #f87171; background: #18080a; padding: 20px; border-radius: 8px;">
                         <h3 style="margin-top: 0; color: #f87171; text-transform: uppercase;">📊 Estimations & Projections - Partenaire 2 (P2)</h3>
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 25px;">
@@ -1206,7 +1271,7 @@
                             <div style="background:#0f172a; padding:12px; border-radius:6px;">Travaux : <br><b style="color:#38bdf8; font-size:1.2em;">${cfg.travaux.toFixed(0)} €</b></div>
                             <div style="background:#0f172a; padding:12px; border-radius:6px;">Montant Total Intérêts + Assurance : <br><b style="color:#f87171; font-size:1.2em;">${det20.montantInterets.toFixed(0)} €</b></div>
                             <div style="background:#0f172a; padding:15px; border-radius:6px; grid-column: 1 / -1; border: 1px solid #4ade80; text-align:center;">
-                                Coût Global du Projet (Apport + Crédit + Frais + Intérêts) : <br>
+                                Coût Global du Projet (Apport Cumulé + Crédit + Frais + Intérêts) : <br>
                                 <b style="color:#4ade80; font-size:1.6em; display:block; margin-top:5px;">${det20.coutGlobalProjet.toFixed(0)} €</b>
                             </div>
                         </div>
@@ -1237,7 +1302,7 @@
                             }
                         }
                         capitalRembourse = Math.min(capitalEmprunte, Math.max(0, capitalRembourse));
-                        let patrimoineNet = cfg.apport + capitalRembourse;
+                        let patrimoineNet = objectifApportCumule + capitalRembourse;
                         let valeurBienEstimee = cfg.prixAnnonce * Math.pow(1.015, annee);
                         let capitalRestantDu = Math.max(0, capitalEmprunte - capitalRembourse);
                         let estimationReventeNet = valeurBienEstimee - capitalRestantDu - (valeurBienEstimee * 0.05);
