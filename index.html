@@ -832,29 +832,37 @@
                 });
 
                 let svgWidth = 800;
-                let svgHeight = 320; // Graphique plus haut pour aérer
+                let svgHeight = 320; 
+                let hauteurGraphPx = svgHeight - 80;
+                let yBase = svgHeight - 40;
                 
-                // On fixe le maximum à 1M pour que 1M touche le haut du graphique (ou s'ajuste si dépassement)
-                let maxValGraph = Math.max(1000000, ...graphiquePointsInvest);
-                
+                // Fonction d'échelle personnalisée pour coller exactement à la maquette :
+                // 0€ -> Bas (yBase)
+                // 10k€ -> 10% de la hauteur
+                // 100k€ -> Mi-hauteur (50%)
+                // 1M€ -> Tout en haut (100%)
                 let echelleY = (val) => {
-                    let vMax = maxValGraph;
-                    let ratio = Math.min(Math.max(val, 0), vMax) / vMax;
-                    let hauteurGraphPx = svgHeight - 80;
-                    return svgHeight - 40 - (ratio * hauteurGraphPx);
+                    if (val <= 0) return yBase;
+                    let v = Math.min(Math.max(val, 0), 1000000);
+                    let ratio = 0;
+                    if (v <= 10000) {
+                        ratio = (v / 10000) * 0.10;
+                    } else if (v <= 100000) {
+                        ratio = 0.10 + ((v - 10000) / (100000 - 10000)) * 0.40;
+                    } else {
+                        ratio = 0.50 + ((v - 100000) / (1000000 - 100000)) * 0.50;
+                    }
+                    return yBase - (ratio * hauteurGraphPx);
                 };
 
-                let paliersMontants = [100000, 250000, 500000, 750000, 1000000];
+                let paliersMontants = [10000, 100000, 500000, 750000, 1000000];
                 let lignesPaliersSvg = paliersMontants.map(palier => {
                     let y = echelleY(palier);
-                    if (y >= 10 && y <= svgHeight - 40) {
-                        let labelPalier = palier >= 1000000 ? (palier/1000000) + 'M€' : (palier/1000) + 'k€';
-                        return `
-                            <line x1="60" y1="${y}" x2="${svgWidth-30}" y2="${y}" stroke="#334155" stroke-width="1" stroke-dasharray="2" />
-                            <text x="52" y="${y+3}" fill="#64748b" font-size="9" text-anchor="end">${labelPalier}</text>
-                        `;
-                    }
-                    return '';
+                    let labelPalier = palier >= 1000000 ? (palier/1000000) + 'M€' : (palier/1000) + 'k€';
+                    return `
+                        <line x1="60" y1="${y}" x2="${svgWidth-30}" y2="${y}" stroke="#334155" stroke-width="1" stroke-dasharray="2" />
+                        <text x="52" y="${y+3}" fill="#64748b" font-size="9" text-anchor="end">${labelPalier}</text>
+                    `;
                 }).join('');
 
                 let largeurBarre = (svgWidth - 100) / jalonsAnnees.length - 8;
@@ -868,7 +876,6 @@
 
                     let yTotal = echelleY(valTotal);
                     let yVerse = echelleY(valVerse);
-                    let yBase = svgHeight - 40;
 
                     let hauteurTotalePx = yBase - yTotal;
                     let hauteurVersePx = yBase - yVerse;
@@ -878,9 +885,8 @@
                     let formatMontantTotal = valTotal >= 1000000 ? (valTotal/1000000).toFixed(2) + 'M' : Math.round(valTotal) + '€';
                     let formatMontantVerse = valVerse >= 1000000 ? (valVerse/1000000).toFixed(2) + 'M' : Math.round(valVerse) + '€';
 
-                    // Si la bougie dépasse ou touche le haut (yTotal <= 45), on met des pointillés bleus au top avec le montant
                     let depassementHtml = '';
-                    if (yTotal <= 50) {
+                    if (valTotal > 1000000) {
                         depassementHtml = `
                             <line x1="${x}" y1="20" x2="${x + largeurBarre}" y2="20" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="3,3" />
                             <text x="${x + largeurBarre/2}" y="12" fill="#38bdf8" font-size="8" font-weight="bold" text-anchor="middle">${formatMontantTotal}</text>
@@ -891,15 +897,13 @@
                         <!-- Partie Haute: Bénéfices de rendement (Vert clair) -->
                         <rect x="${x}" y="${yTotal}" width="${largeurBarre}" height="${hauteurBeneficePx}" fill="#4ade80" stroke="#00ffcc" stroke-width="1" rx="2" />
                         
-                        <!-- Partie Basse: Montant investi (Bleu foncé) avec affichage du montant au centre/milieu de la zone -->
+                        <!-- Partie Basse: Montant investi (Bleu foncé) -->
                         <rect x="${x}" y="${yVerse}" width="${largeurBarre}" height="${hauteurVersePx}" fill="#1e3a8a" stroke="#38bdf8" stroke-width="1" rx="2" />
                         ${hauteurVersePx > 18 ? `<text x="${x + largeurBarre/2}" y="${yVerse + hauteurVersePx/2 + 3}" fill="#93c5fd" font-size="7" font-weight="bold" text-anchor="middle">${formatMontantVerse}</text>` : ''}
                         
-                        <!-- Lignes pointillées pour les dépassements au sommet -->
                         ${depassementHtml}
 
-                        <!-- Montant total standard en haut de la barre si non collé au plafond -->
-                        ${yTotal > 50 ? `<text x="${x + largeurBarre/2}" y="${yTotal - 5}" fill="#f8fafc" font-size="8" font-weight="bold" text-anchor="middle">${formatMontantTotal}</text>` : ''}
+                        ${valTotal <= 1000000 ? `<text x="${x + largeurBarre/2}" y="${yTotal - 5}" fill="#f8fafc" font-size="8" font-weight="bold" text-anchor="middle">${formatMontantTotal}</text>` : ''}
                         
                         <!-- Libellé de l'année en bas -->
                         <text x="${x + largeurBarre/2}" y="${svgHeight-15}" fill="#94a3b8" font-size="9" text-anchor="middle">${libelleAn}</text>
