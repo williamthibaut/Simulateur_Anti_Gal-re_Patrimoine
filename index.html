@@ -832,29 +832,26 @@
                 });
 
                 let svgWidth = 800;
-                let svgHeight = 240;
-                let maxValGraph = Math.max(...graphiquePointsInvest, 1000000);
-                let minValGraph = 0;
+                let svgHeight = 320; // Graphique plus haut pour aérer
                 
-                // Fonction de mise à l'échelle non linéaire (ex: racine carrée inversée) pour aérer les petites valeurs
-                // Permet d'étirer le bas et de compresser le haut (les grands montants)
+                // On fixe le maximum à 1M pour que 1M touche le haut du graphique (ou s'ajuste si dépassement)
+                let maxValGraph = Math.max(1000000, ...graphiquePointsInvest);
+                
                 let echelleY = (val) => {
                     let vMax = maxValGraph;
                     let ratio = Math.min(Math.max(val, 0), vMax) / vMax;
-                    // Transformation puissance (ex: 0.4 donne plus d'espace au bas du graphe)
-                    let ratioTransforme = Math.pow(ratio, 0.45);
-                    let hauteurGraphPx = svgHeight - 65;
-                    return svgHeight - 35 - (ratioTransforme * hauteurGraphPx);
+                    let hauteurGraphPx = svgHeight - 80;
+                    return svgHeight - 40 - (ratio * hauteurGraphPx);
                 };
 
-                let paliersMontants = [10000, 25000, 50000, 100000, 250000, 500000, 1000000];
+                let paliersMontants = [100000, 250000, 500000, 750000, 1000000];
                 let lignesPaliersSvg = paliersMontants.map(palier => {
-                    if (palier <= maxValGraph * 1.1) {
-                        let y = echelleY(palier);
+                    let y = echelleY(palier);
+                    if (y >= 10 && y <= svgHeight - 40) {
                         let labelPalier = palier >= 1000000 ? (palier/1000000) + 'M€' : (palier/1000) + 'k€';
                         return `
                             <line x1="60" y1="${y}" x2="${svgWidth-30}" y2="${y}" stroke="#334155" stroke-width="1" stroke-dasharray="2" />
-                            <text x="52" y="${y+3}" fill="#64748b" font-size="8" text-anchor="end">${labelPalier}</text>
+                            <text x="52" y="${y+3}" fill="#64748b" font-size="9" text-anchor="end">${labelPalier}</text>
                         `;
                     }
                     return '';
@@ -871,23 +868,39 @@
 
                     let yTotal = echelleY(valTotal);
                     let yVerse = echelleY(valVerse);
-                    let yBase = svgHeight - 35;
+                    let yBase = svgHeight - 40;
 
                     let hauteurTotalePx = yBase - yTotal;
                     let hauteurVersePx = yBase - yVerse;
                     let hauteurBeneficePx = Math.max(0, yVerse - yTotal);
 
                     let libelleAn = an === 1 ? 'An 1' : `${an}a`;
-                    let formatMontantCourt = valTotal >= 1000000 ? (valTotal/1000000).toFixed(1) + 'M' : Math.round(valTotal) + '€';
+                    let formatMontantTotal = valTotal >= 1000000 ? (valTotal/1000000).toFixed(2) + 'M' : Math.round(valTotal) + '€';
+                    let formatMontantVerse = valVerse >= 1000000 ? (valVerse/1000000).toFixed(2) + 'M' : Math.round(valVerse) + '€';
+
+                    // Si la bougie dépasse ou touche le haut (yTotal <= 45), on met des pointillés bleus au top avec le montant
+                    let depassementHtml = '';
+                    if (yTotal <= 50) {
+                        depassementHtml = `
+                            <line x1="${x}" y1="20" x2="${x + largeurBarre}" y2="20" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="3,3" />
+                            <text x="${x + largeurBarre/2}" y="12" fill="#38bdf8" font-size="8" font-weight="bold" text-anchor="middle">${formatMontantTotal}</text>
+                        `;
+                    }
 
                     barresSvgHtml += `
                         <!-- Partie Haute: Bénéfices de rendement (Vert clair) -->
-                        <rect x="${x}" y="${yTotal}" width="${largeurBarre}" height="${hauteurBeneficePx}" fill="#4ade80" stroke="#00ffcc" stroke-width="1.5" rx="2" />
-                        <!-- Partie Basse: Montant investi (Bleu foncé) -->
-                        <rect x="${x}" y="${yVerse}" width="${largeurBarre}" height="${hauteurVersePx}" fill="#1e3a8a" stroke="#00ffcc" stroke-width="1.5" rx="2" />
+                        <rect x="${x}" y="${yTotal}" width="${largeurBarre}" height="${hauteurBeneficePx}" fill="#4ade80" stroke="#00ffcc" stroke-width="1" rx="2" />
                         
-                        <!-- Montant total en haut de la barre -->
-                        <text x="${x + largeurBarre/2}" y="${yTotal - 5}" fill="#f8fafc" font-size="8" font-weight="bold" text-anchor="middle">${formatMontantCourt}</text>
+                        <!-- Partie Basse: Montant investi (Bleu foncé) avec affichage du montant au centre/milieu de la zone -->
+                        <rect x="${x}" y="${yVerse}" width="${largeurBarre}" height="${hauteurVersePx}" fill="#1e3a8a" stroke="#38bdf8" stroke-width="1" rx="2" />
+                        ${hauteurVersePx > 18 ? `<text x="${x + largeurBarre/2}" y="${yVerse + hauteurVersePx/2 + 3}" fill="#93c5fd" font-size="7" font-weight="bold" text-anchor="middle">${formatMontantVerse}</text>` : ''}
+                        
+                        <!-- Lignes pointillées pour les dépassements au sommet -->
+                        ${depassementHtml}
+
+                        <!-- Montant total standard en haut de la barre si non collé au plafond -->
+                        ${yTotal > 50 ? `<text x="${x + largeurBarre/2}" y="${yTotal - 5}" fill="#f8fafc" font-size="8" font-weight="bold" text-anchor="middle">${formatMontantTotal}</text>` : ''}
+                        
                         <!-- Libellé de l'année en bas -->
                         <text x="${x + largeurBarre/2}" y="${svgHeight-15}" fill="#94a3b8" font-size="9" text-anchor="middle">${libelleAn}</text>
                     `;
@@ -918,8 +931,8 @@
                             <div style="width:100%; overflow-x:auto;">
                                 <svg viewBox="0 0 ${svgWidth} ${svgHeight}" style="width:100%; height:auto; min-width:600px;">
                                     ${lignesPaliersSvg}
-                                    <line x1="60" y1="10" x2="60" y2="${svgHeight-25}" stroke="#475569" stroke-width="1.5" />
-                                    <line x1="60" y1="${svgHeight-25}" x2="${svgWidth-30}" y2="${svgHeight-25}" stroke="#475569" stroke-width="1.5" />
+                                    <line x1="60" y1="20" x2="60" y2="${svgHeight-30}" stroke="#475569" stroke-width="1.5" />
+                                    <line x1="60" y1="${svgHeight-30}" x2="${svgWidth-30}" y2="${svgHeight-30}" stroke="#475569" stroke-width="1.5" />
                                     
                                     ${barresSvgHtml}
                                 </svg>
