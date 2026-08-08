@@ -314,7 +314,6 @@
                 if (cfg.hasOwnProperty(name)) {
                     let val = parseFloat(input.value) || 0;
                     cfg[name] = val;
-                    // Liaison automatique Prix Annonce -> Prix Net Vendeur (ex: -5% de frais d'agence par défaut si modifié)
                     if(name === 'prixAnnonce') {
                         cfg.prixNetVendeur = Math.round(val * 0.95);
                         const netVendeurInput = document.querySelector('input[name="prixNetVendeur"]');
@@ -710,8 +709,7 @@
                 let blocksProjetHtml = '';
                 
                 let graphiquePointsInvest = [];
-                let graphiquePointsVerse = []; // Montant réel investi cumulé (Apport + Versements)
-                let valeurInitialeTotale = totalDispo + totalBloque + totalPatrimoineSupp;
+                let graphiquePointsVerse = []; 
                 let versementMensuelTotalGlobal = totalInvest + comptesDispo.reduce((acc,c)=>acc+(c.versementMensuel||0),0) + placementsBloques.reduce((acc,p)=>acc+(p.versementMensuel||0),0);
 
                 let tousPlacements = [...placementsBloques, ...comptesDispo];
@@ -749,8 +747,7 @@
                     sommeGlobalAn += totalPatrimoineSupp;
                     graphiquePointsInvest.push(sommeGlobalAn);
 
-                    // Calcul du montant réel investi cumulé (Apport initial + épargne mensuelle versée au fil du temps)
-                    let totalVerseCumule = cfg.apport + (versementMensuelTotalGlobal * an * 12) + totalPatrimoineSupp;
+                    let totalVerseCumule = (totalDispo + totalBloque) + (versementMensuelTotalGlobal * an * 12) + totalPatrimoineSupp;
                     graphiquePointsVerse.push(totalVerseCumule);
                 });
 
@@ -835,27 +832,14 @@
                 });
 
                 let svgWidth = 800;
-                let svgHeight = 220;
-                let maxValGraph = Math.max(...graphiquePointsInvest, ...graphiquePointsVerse, 100000);
+                let svgHeight = 240;
+                let maxValGraph = Math.max(...graphiquePointsInvest, 100000);
                 let minValGraph = 0;
                 
-                let pointsInvestSvg = graphiquePointsInvest.map((val, idx) => {
-                    let x = 60 + (idx / (jalonsAnnees.length - 1)) * (svgWidth - 90);
-                    let y = svgHeight - 35 - ((val - minValGraph) / (maxValGraph - minValGraph || 1)) * (svgHeight - 55);
-                    return `${x},${y}`;
-                }).join(' ');
-
-                let pointsVerseSvg = graphiquePointsVerse.map((val, idx) => {
-                    let x = 60 + (idx / (jalonsAnnees.length - 1)) * (svgWidth - 90);
-                    let y = svgHeight - 35 - ((val - minValGraph) / (maxValGraph - minValGraph || 1)) * (svgHeight - 55);
-                    return `${x},${y}`;
-                }).join(' ');
-
-                // Paliers horizontaux demandés : 10k, 25k, 50k, 100k, 250k, 1M
                 let paliersMontants = [10000, 25000, 50000, 100000, 250000, 1000000];
                 let lignesPaliersSvg = paliersMontants.map(palier => {
                     if (palier <= maxValGraph * 1.1) {
-                        let y = svgHeight - 35 - ((palier - minValGraph) / (maxValGraph - minValGraph || 1)) * (svgHeight - 55);
+                        let y = svgHeight - 35 - ((palier - minValGraph) / (maxValGraph - minValGraph || 1)) * (svgHeight - 65);
                         let labelPalier = palier >= 1000000 ? (palier/1000000) + 'M€' : (palier/1000) + 'k€';
                         return `
                             <line x1="60" y1="${y}" x2="${svgWidth-30}" y2="${y}" stroke="#334155" stroke-width="1" stroke-dasharray="2" />
@@ -864,6 +848,38 @@
                     }
                     return '';
                 }).join('');
+
+                let largeurBarre = (svgWidth - 100) / jalonsAnnees.length - 8;
+                let barresSvgHtml = '';
+
+                jalonsAnnees.forEach((an, idx) => {
+                    let x = 65 + idx * ((svgWidth - 90) / jalonsAnnees.length);
+                    let valTotal = graphiquePointsInvest[idx];
+                    let valVerse = graphiquePointsVerse[idx];
+                    if (valVerse > valTotal) valVerse = valTotal; // Sécurité
+
+                    let hauteurTotalePx = ((valTotal - minValGraph) / (maxValGraph - minValGraph || 1)) * (svgHeight - 65);
+                    let hauteurVersePx = ((valVerse - minValGraph) / (maxValGraph - minValGraph || 1)) * (svgHeight - 65);
+                    let hauteurBeneficePx = Math.max(0, hauteurTotalePx - hauteurVersePx);
+
+                    let yTotal = svgHeight - 35 - hauteurTotalePx;
+                    let yVerse = svgHeight - 35 - hauteurVersePx;
+                    let libelleAn = an === 1 ? 'An 1' : `${an}a`;
+
+                    let formatMontantCourt = valTotal >= 1000000 ? (valTotal/1000000).toFixed(1) + 'M' : Math.round(valTotal) + '€';
+
+                    barresSvgHtml += `
+                        <!-- Partie Haute: Bénéfices de rendement (Vert clair) -->
+                        <rect x="${x}" y="${yTotal}" width="${largeurBarre}" height="${hauteurBeneficePx}" fill="#4ade80" stroke="#00ffcc" stroke-width="1.5" rx="2" />
+                        <!-- Partie Basse: Montant investi (Bleu foncé) -->
+                        <rect x="${x}" y="${yVerse}" width="${largeurBarre}" height="${hauteurVersePx}" fill="#1e3a8a" stroke="#00ffcc" stroke-width="1.5" rx="2" />
+                        
+                        <!-- Montant total en haut de la barre -->
+                        <text x="${x + largeurBarre/2}" y="${yTotal - 5}" fill="#f8fafc" font-size="8" font-weight="bold" text-anchor="middle">${formatMontantCourt}</text>
+                        <!-- Libellé de l'année en bas -->
+                        <text x="${x + largeurBarre/2}" y="${svgHeight-15}" fill="#94a3b8" font-size="9" text-anchor="middle">${libelleAn}</text>
+                    `;
+                });
 
                 projetHtml = `
                     <div class="card" style="border: 2px solid #38bdf8; background: linear-gradient(135deg, #0f172a, #1e293b); box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);">
@@ -882,10 +898,10 @@
                         </div>
 
                         <div style="background:#0b0f19; padding:15px; border-radius:6px; margin-top:20px; border:1px solid #334155;">
-                            <h3 style="margin-top:0; color:#38bdf8; font-size:1rem; text-align:center;">📈 Courbe d'Évolution du Patrimoine (Valeur Estimée vs Montant Réel Investi)</h3>
+                            <h3 style="margin-top:0; color:#38bdf8; font-size:1rem; text-align:center;">📊 Évolution du Patrimoine (Barres Verticales & Rendement)</h3>
                             <div style="display:flex; justify-content:center; gap:20px; font-size:12px; margin-bottom:10px;">
-                                <span style="color:#4ade80; font-weight:bold;">● Patrimoine / Investissements (Estimé avec rendement)</span>
-                                <span style="color:#ef4444; font-weight:bold;">● Montant Réel Investi (Votre poche)</span>
+                                <span style="color:#4ade80; font-weight:bold;">■ Bénéfices de rendement (Vert clair)</span>
+                                <span style="color:#3b82f6; font-weight:bold;">■ Montant investi (Bleu foncé)</span>
                             </div>
                             <div style="width:100%; overflow-x:auto;">
                                 <svg viewBox="0 0 ${svgWidth} ${svgHeight}" style="width:100%; height:auto; min-width:600px;">
@@ -893,21 +909,7 @@
                                     <line x1="60" y1="10" x2="60" y2="${svgHeight-25}" stroke="#475569" stroke-width="1.5" />
                                     <line x1="60" y1="${svgHeight-25}" x2="${svgWidth-30}" y2="${svgHeight-25}" stroke="#475569" stroke-width="1.5" />
                                     
-                                    <!-- Courbe Montant Réel Investi (Rouge) -->
-                                    <polyline fill="none" stroke="#ef4444" stroke-width="2" points="${pointsVerseSvg}" />
-                                    <!-- Courbe Patrimoine avec rendement (Vert) -->
-                                    <polyline fill="none" stroke="#4ade80" stroke-width="3" points="${pointsInvestSvg}" />
-
-                                    ${jalonsAnnees.map((an, idx) => {
-                                        let x = 60 + (idx / (jalonsAnnees.length - 1)) * (svgWidth - 90);
-                                        let valInvest = graphiquePointsInvest[idx];
-                                        let yInvest = svgHeight - 35 - ((valInvest - minValGraph) / (maxValGraph - minValGraph || 1)) * (svgHeight - 55);
-                                        let libelleAn = an === 1 ? 'An 1' : `${an}a`;
-                                        return `
-                                            <circle cx="${x}" cy="${yInvest}" r="3" fill="#4ade80" />
-                                            <text x="${x}" y="${svgHeight-10}" fill="#94a3b8" font-size="9" text-anchor="middle">${libelleAn}</text>
-                                        `;
-                                    }).join('')}
+                                    ${barresSvgHtml}
                                 </svg>
                             </div>
                         </div>
