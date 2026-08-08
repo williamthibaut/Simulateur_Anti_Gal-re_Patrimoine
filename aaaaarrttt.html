@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>App Bank RPG - Simulateur Patrimonial Expert & Smart AI Budget Optimizer</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 10px; }
+        .container { max-width: 1400px; margin: auto; background: #1e293b; padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        h1, h2, h3 { color: #38bdf8; }
+        .nav { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+        .nav button { padding: 8px 12px; background: #334155; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
+        .nav button.active { background: #38bdf8; color: #0f172a; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: #0f172a; font-size: 12px; }
+        th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #334155; white-space: nowrap; }
+        th { background: #334155; }
+        
+        .form-section-card { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 15px; margin-bottom: 15px; transition: opacity 0.3s ease, filter 0.3s ease; }
+        .form-section-card.disabled-section { opacity: 0.45; }
+        .form-section-card.disabled-section input:not([type="checkbox"]), 
+        .form-section-card.disabled-section select,
+        .form-section-card.disabled-section button:not(.immo-toggle-master-btn) { pointer-events: none; opacity: 0.6; }
+
+        .form-section-title { font-size: 14px; font-weight: bold; color: #38bdf8; margin-bottom: 12px; border-bottom: 1px solid #334155; padding-bottom: 6px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .form-grid-inner { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+        
+        .form-group label { display: block; font-size: 11px; color: #94a3b8; margin-bottom: 3px; font-weight: bold; }
+        .input-wrapper { display: flex; align-items: center; background: #1e293b; border: 1px solid #475569; border-radius: 4px; overflow: hidden; }
+        .input-wrapper input { background: transparent; border: none; color: white; padding: 6px; width: 100%; outline: none; box-sizing: border-box; }
+        .reset-btn { background: transparent; border: none; color: #64748b; padding: 0 8px; cursor: pointer; font-size: 14px; font-weight: bold; }
+        .reset-btn:hover { color: #f87171; }
+        
+        button.action-btn { background: #4f46e5; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; margin-right: 5px; margin-top: 5px; }
+        button.action-btn:hover { background: #4338ca; }
+        button.del-btn { background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; }
+        button.del-btn:hover { background: #dc2626; }
+        .card { background: #0f172a; padding: 15px; border-radius: 6px; margin-top: 15px; border: 1px solid #334155; }
+        
+        .table-layout-container { display: grid; grid-template-columns: 1fr 320px; gap: 15px; align-items: start; margin-top: 10px; }
+        @media (max-width: 1100px) {
+            .table-layout-container { grid-template-columns: 1fr; }
+            .form-grid-inner { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div style="background:linear-gradient(135deg, #1e293b, #0f172a); border:2px solid #38bdf8; padding:15px; border-radius:8px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px; box-shadow:0 0 15px rgba(56,189,248,0.25);">
+            <div>
+                <h1 id="titre-mode" style="margin:0; font-size:1.3rem; color:#f8fafc; text-transform:uppercase;">Ressources & Dépenses Mensuelles</h1>
+                <span style="font-size:11px; color:#94a3b8;">Gérez vos flux financiers et simulez vos projets d'avenir</span>
+            </div>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; align-items:center; margin-bottom: 15px;">
+            <div class="nav" style="margin-bottom:0;">
+                <button id="btn-proprietaire" onclick="changerMode('proprietaire')">Ressources & Dépenses</button>
+                <button id="btn-projet" onclick="changerMode('projet')">Projet & Patrimoine</button>
+                <button id="btn-ia" onclick="changerMode('ia')" style="background:#0284c7; font-weight:bold;">🤖 Smart AI</button>
+            </div>
+        </div>
+        
+        <div id="app-content"></div>
+    </div>
+
+    <script>
+        let modeActuel = 'proprietaire';
+        let dernierMessageAlerte = '';
+        
+        let cfg = {
+            salaireBrut: 2950,
+            primeAnciennete: 170,
+            tauxPas: 5.7,
+            salaireNet: 0,
+            travaux: 0,
+            prixAnnonce: 100000,
+            prixNetVendeur: 116000,
+            fraisNotaireTaux: 7.5,
+            taux: 3.6,
+            apport: 10000,
+            taeg: 4.1,
+            assuranceTauxAnnuel: 0.34,
+            copro: 100,
+            taxe: 60,
+            loyerActuel: 650,
+            internet: 34,
+            transport: 29,
+            pea: 100,
+            per: 50,
+            bitstack: 52,
+            lep: 300,
+            courses: 250,
+            loisirs: 100,
+            montantProjet: 0,
+            objectifResteAVivre: 100,
+            optionCibleOptimisation: '20',
+            surplusStrategie: 'loisirs', 
+            dateDebutProjet: '2027-08',
+            possedeImmo: true,
+            depenseFuturNom: 'Vacances futur',
+            depenseFuturMontant: 0,
+            depenseFuturCompteCible: 'LEP (Matelas Sécurité)'
+        };
+
+        let abonnementsVie = [
+            { nom: 'World of Warcraft', montant: 11.99 },
+            { nom: 'Salle de sport', montant: 30.00 }
+        ];
+
+        let comptesDispo = [
+            { nom: 'Compte Courant Boursorama', solde: 200, rendement: 0, versementMensuel: 0, virementExterne: 0 },
+            { nom: 'Livret A', solde: 1, rendement: 1.7, versementMensuel: 0, virementExterne: 0 },
+            { nom: 'LEP (Matelas Sécurité)', solde: 1550, rendement: 2.5, versementMensuel: 100, virementExterne: 0 }
+        ];
+
+        let placementsBloques = [
+            { nom: 'PEA (Actions Mondiales / ETF)', solde: 2150, rendement: 7.5, versementMensuel: 100, virementExterne: 0 },
+            { nom: 'PER (Plan Épargne Retraite)', solde: 1700, rendement: 5.0, versementMensuel: 50, virementExterne: 0 },
+            { nom: 'Bitstack / Bitcoin', solde: 595, rendement: 10.0, versementMensuel: 20, virementExterne: 0 },
+            { nom: 'PEL (Plan Épargne Logement)', solde: 2880, rendement: 1.6, versementMensuel: 0, virementExterne: 50 }
+        ];
+
+        let patrimoineSupplementaire = [
+            { nom: 'Carte / Objets de collection', valeur: 700 },
+            { nom: 'Quiver de Kitesurf (Ail harnais barre pompe -2023-2024)', valeur: 1000 }
+        ];
+
+        let snapshotDernierEnregistrement = null;
+
+        function faireSnapshotFormulaire() {
+            synchroniserDonneesDynamiques();
+            snapshotDernierEnregistrement = {
+                cfg: JSON.parse(JSON.stringify(cfg)),
+                abonnementsVie: JSON.parse(JSON.stringify(abonnementsVie)),
+                comptesDispo: JSON.parse(JSON.stringify(comptesDispo)),
+                placementsBloques: JSON.parse(JSON.stringify(placementsBloques)),
+                patrimoineSupplementaire: JSON.parse(JSON.stringify(patrimoineSupplementaire))
+            };
+            dernierMessageAlerte = "💾 Budget validé et enregistré comme référence pour le reset !";
+        }
+
+        function restaurerDernierEnregistrement() {
+            if (!snapshotDernierEnregistrement) {
+                dernierMessageAlerte = "⚠️ Aucun enregistrement précédent trouvé. Cliquez d'abord sur 'Mettre à jour le budget'.";
+                render();
+                return;
+            }
+            cfg = JSON.parse(JSON.stringify(snapshotDernierEnregistrement.cfg));
+            abonnementsVie = JSON.parse(JSON.stringify(snapshotDernierEnregistrement.abonnementsVie));
+            comptesDispo = JSON.parse(JSON.stringify(snapshotDernierEnregistrement.comptesDispo));
+            placementsBloques = JSON.parse(JSON.stringify(snapshotDernierEnregistrement.placementsBloques));
+            patrimoineSupplementaire = JSON.parse(JSON.stringify(snapshotDernierEnregistrement.patrimoineSupplementaire));
+            dernierMessageAlerte = "↩️ Restauration effectuée : retour aux valeurs du dernier 'Mettre à jour le budget'.";
+            render();
+        }
+
+        function ajouterLignePatrimoineSupp() {
+            synchroniserDonneesDynamiques();
+            patrimoineSupplementaire.push({ nom: 'Nouvel Actif', valeur: 0 });
+            render();
+        }
+
+        function supprimerLignePatrimoineSupp(index) {
+            synchroniserDonneesDynamiques();
+            patrimoineSupplementaire.splice(index, 1);
+            render();
+        }
+
+        function calculerPret(capital, tauxAnnuel, dureeAnnees) {
+            if (capital <= 0 || tauxAnnuel <= 0) return 0;
+            const r = tauxAnnuel / 100 / 12;
+            const n = dureeAnnees * 12;
+            return (capital * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+        }
+
+        function changerMode(nouveauMode) {
+            modeActuel = nouveauMode;
+            render();
+        }
+
+        function resetField(fieldName) {
+            if (cfg.hasOwnProperty(fieldName)) {
+                cfg[fieldName] = 0;
+            }
+            render();
+        }
+
+        function ajouterAbonnement() {
+            abonnementsVie.push({ nom: 'Nouvel Abonnement', montant: 10.00 });
+            render();
+        }
+
+        function supprimerAbonnement(index) {
+            abonnementsVie.splice(index, 1);
+            render();
+        }
+
+        function ajouterCompteDispo() {
+            comptesDispo.push({ nom: 'Nouveau Compte', solde: 0, rendement: 0, versementMensuel: 0, virementExterne: 0 });
+            render();
+        }
+
+        function supprimerCompteDispo(index) {
+            comptesDispo.splice(index, 1);
+            render();
+        }
+
+        function ajouterPlacementBloque() {
+            placementsBloques.push({ nom: 'Nouveau Placement', solde: 0, rendement: 5.0, versementMensuel: 0, virementExterne: 0 });
+            render();
+        }
+
+        function supprimerPlacementBloque(index) {
+            placementsBloques.splice(index, 1);
+            render();
+        }
+
+        function synchroniserDonneesDynamiques() {
+            const rowsAbo = document.querySelectorAll('#table-abos tr.row-abo');
+            rowsAbo.forEach((row, i) => {
+                if (abonnementsVie[i]) {
+                    abonnementsVie[i].nom = row.querySelector('.inp-abo-nom').value;
+                    abonnementsVie[i].montant = parseFloat(row.querySelector('.inp-abo-val').value) || 0;
+                }
+            });
+
+            const rowsDispo = document.querySelectorAll('#table-dispo tr.row-dispo');
+            rowsDispo.forEach((row, i) => {
+                if (comptesDispo[i]) {
+                    comptesDispo[i].nom = row.querySelector('.inp-nom').value;
+                    comptesDispo[i].solde = parseFloat(row.querySelector('.inp-solde').value) || 0;
+                    const inpV = row.querySelector('.inp-versement');
+                    if (inpV) {
+                        comptesDispo[i].versementMensuel = parseFloat(inpV.value) || 0;
+                        let nomC = comptesDispo[i].nom.toUpperCase();
+                        if(nomC.includes('LEP')) {
+                            cfg.lep = comptesDispo[i].versementMensuel;
+                        }
+                    }
+                    const inpExt = row.querySelector('.inp-virement-externe');
+                    if (inpExt) {
+                        comptesDispo[i].virementExterne = parseFloat(inpExt.value) || 0;
+                    }
+                    comptesDispo[i].rendement = parseFloat(row.querySelector('.inp-rendement').value) || 0;
+                }
+            });
+
+            const rowsBloque = document.querySelectorAll('#table-bloque tr.row-bloque');
+            rowsBloque.forEach((row, i) => {
+                if (placementsBloques[i]) {
+                    placementsBloques[i].nom = row.querySelector('.inp-nom').value;
+                    placementsBloques[i].solde = parseFloat(row.querySelector('.inp-solde').value) || 0;
+                    const inpV = row.querySelector('.inp-versement');
+                    if (inpV) {
+                        placementsBloques[i].versementMensuel = parseFloat(inpV.value) || 0;
+                        let nomP = placementsBloques[i].nom.toUpperCase();
+                        if(nomP.includes('PEA')) cfg.pea = placementsBloques[i].versementMensuel;
+                        if(nomP.includes('PER')) cfg.per = placementsBloques[i].versementMensuel;
+                        if(nomP.includes('BITSTACK') || nomP.includes('BITCOIN')) cfg.bitstack = placementsBloques[i].versementMensuel;
+                    }
+                    const inpExt = row.querySelector('.inp-virement-externe');
+                    if (inpExt) {
+                        placementsBloques[i].virementExterne = parseFloat(inpExt.value) || 0;
+                    }
+                    placementsBloques[i].rendement = parseFloat(row.querySelector('.inp-rendement').value) || 0;
+                }
+            });
+
+            const rowsPatSupp = document.querySelectorAll('#table-patsupp tr.row-patsupp');
+            rowsPatSupp.forEach((row, i) => {
+                if (patrimoineSupplementaire[i]) {
+                    patrimoineSupplementaire[i].nom = row.querySelector('.inp-patsupp-nom').value;
+                    patrimoineSupplementaire[i].valeur = parseFloat(row.querySelector('.inp-patsupp-val').value) || 0;
+                }
+            });
+
+            const inputGoalSide = document.getElementById('inp-side-goal');
+            if (inputGoalSide) {
+                cfg.objectifResteAVivre = parseFloat(inputGoalSide.value) || 0;
+            }
+
+            const selectOptionOpt = document.getElementById('sel-option-optimisation');
+            if (selectOptionOpt) {
+                cfg.optionCibleOptimisation = selectOptionOpt.value;
+            }
+
+            const selectSurplus = document.getElementById('sel-surplus-strategie');
+            if (selectSurplus) {
+                cfg.surplusStrategie = selectSurplus.value;
+            }
+
+            const inpDateProj = document.getElementById('inp-date-projet');
+            if (inpDateProj) {
+                cfg.dateDebutProjet = inpDateProj.value;
+            }
+
+            const inpDepNom = document.getElementById('inp-depense-nom');
+            if (inpDepNom) cfg.depenseFuturNom = inpDepNom.value;
+
+            const inpDepMontant = document.getElementById('inp-depense-montant');
+            if (inpDepMontant) cfg.depenseFuturMontant = parseFloat(inpDepMontant.value) || 0;
+
+            const selDepCompte = document.getElementById('sel-depense-compte');
+            if (selDepCompte) cfg.depenseFuturCompteCible = selDepCompte.value;
+        }
+
+        function sauvegarderFormulaire(event) {
+            if(event) event.preventDefault();
+            synchroniserDonneesDynamiques();
+
+            const inputs = document.querySelectorAll('.form-section-card input');
+            inputs.forEach(input => {
+                const name = input.name;
+                if (cfg.hasOwnProperty(name)) {
+                    cfg[name] = parseFloat(input.value) || 0;
+                }
+            });
+
+            const checkboxImmo = document.getElementById('chk-possede-immo-toggle');
+            if (checkboxImmo) {
+                cfg.possedeImmo = checkboxImmo.checked;
+            }
+
+            const brutTotal = cfg.salaireBrut + cfg.primeAnciennete;
+            const netAvantPas = brutTotal * 0.78; 
+            cfg.salaireNet = netAvantPas * (1 - (cfg.tauxPas / 100));
+
+            faireSnapshotFormulaire();
+            render();
+        }
+
+        function toggleImmoCheckbox() {
+            const checkboxImmo = document.getElementById('chk-possede-immo-toggle');
+            if (checkboxImmo) {
+                cfg.possedeImmo = checkboxImmo.checked;
+                sauvegarderFormulaire(null);
+            }
+        }
+
+        function spamOptimization() {
+            synchroniserDonneesDynamiques();
+            dernierMessageAlerte = '';
+            
+            const brutTotal = cfg.salaireBrut + cfg.primeAnciennete;
+            const netAvantPas = brutTotal * 0.78; 
+            cfg.salaireNet = netAvantPas * (1 - (cfg.tauxPas / 100));
+
+            const fraisNotaireCalculés = cfg.prixAnnonce * (cfg.fraisNotaireTaux / 100);
+            const coutTotalProjet = cfg.prixAnnonce + fraisNotaireCalculés + cfg.travaux;
+            const capitalEmprunte = Math.max(0, (cfg.montantProjet > 0 ? cfg.montantProjet : coutTotalProjet) - cfg.apport);
+
+            let dureeCible = parseInt(cfg.optionCibleOptimisation) || 20;
+            let tauxCible = cfg.taeg;
+            if (dureeCible === 10) tauxCible -= 0.5;
+            else if (dureeCible === 15) tauxCible -= 0.3;
+            else if (dureeCible === 25) tauxCible += 0.2;
+            else if (dureeCible === 30) tauxCible += 0.4;
+
+            const mCible = calculerPret(capitalEmprunte, tauxCible, dureeCible);
+            const assuranceMensuelle = (capitalEmprunte * (cfg.assuranceTauxAnnuel / 100)) / 12;
+            const totalLogCible = (cfg.possedeImmo ? (mCible + assuranceMensuelle + cfg.copro + cfg.taxe) : cfg.loyerActuel) + cfg.internet + cfg.transport;
+
+            const totalInvest = cfg.pea + cfg.per + cfg.bitstack + cfg.lep;
+            let totalAbos = abonnementsVie.reduce((acc, a) => acc + a.montant, 0);
+            const totalVie = cfg.courses + cfg.loisirs + totalAbos;
+
+            let resteCible = cfg.salaireNet - totalLogCible - totalInvest - totalVie;
+            let ecart = cfg.objectifResteAVivre - resteCible;
+
+            if (ecart > 0) {
+                let sommeInvestPEAPER = cfg.pea + cfg.per;
+                let reductionInvest = Math.min(sommeInvestPEAPER, ecart);
+                let partPEA = cfg.pea > 0 && sommeInvestPEAPER > 0 ? reductionInvest * (cfg.pea / sommeInvestPEAPER) : 0;
+                let partPER = cfg.per > 0 && sommeInvestPEAPER > 0 ? reductionInvest * (cfg.per / sommeInvestPEAPER) : 0;
+                cfg.pea -= partPEA;
+                cfg.per -= partPER;
+                ecart -= reductionInvest;
+
+                if (ecart > 0) {
+                    let abonnementsCibles = [...abonnementsVie];
+                    while (ecart > 0 && abonnementsCibles.length > 0) {
+                        let aboActuel = abonnementsCibles[abonnementsCibles.length - 1];
+                        if (aboActuel.montant > 0) {
+                            let baisse = Math.min(aboActuel.montant, ecart);
+                            aboActuel.montant -= baisse;
+                            ecart -= baisse;
+                            if (aboActuel.montant <= 0) abonnementsCibles.pop();
+                        } else {
+                            abonnementsCibles.pop();
+                        }
+                    }
+                }
+
+                if (ecart > 0 && cfg.loisirs > 0) {
+                    let baisse = Math.min(cfg.loisirs, ecart);
+                    cfg.loisirs -= baisse;
+                    ecart -= baisse;
+                }
+
+                if (ecart > 0 && cfg.courses > 100) {
+                    let maxBaisseCourses = cfg.courses - 100;
+                    let baisse = Math.min(maxBaisseCourses, ecart);
+                    cfg.courses -= baisse;
+                    ecart -= baisse;
+                }
+
+                if (ecart > 0) {
+                    dernierMessageAlerte = `⚠️ Déficit résiduel (${ecart.toFixed(2)}€) : Budgets minimaux atteints.`;
+                } else {
+                    dernierMessageAlerte = `🎯 Option ${dureeCible} Ans optimisée !`;
+                }
+
+            } else if (ecart < 0) {
+                let surplus = Math.abs(ecart);
+
+                if (surplus > 0 && cfg.courses < 250) {
+                    let besoin = 250 - cfg.courses;
+                    let ajout = Math.min(besoin, surplus);
+                    cfg.courses += ajout;
+                    surplus -= ajout;
+                }
+
+                if (surplus > 0) {
+                    let ciblesAbo = [11.99, 30.00];
+                    abonnementsVie.forEach((abo, idx) => {
+                        let cibleVal = ciblesAbo[idx] || 15.00;
+                        if (surplus > 0 && abo.montant < cibleVal) {
+                            let besoinAbo = cibleVal - abo.montant;
+                            let ajoutAbo = Math.min(besoinAbo, surplus);
+                            abo.montant += ajoutAbo;
+                            surplus -= ajoutAbo;
+                        }
+                    });
+                }
+
+                if (surplus > 0) {
+                    if (cfg.surplusStrategie === 'loisirs') {
+                        cfg.loisirs += surplus;
+                        dernierMessageAlerte = `✨ Surplus réalloué en priorité dans les Loisirs (+${surplus.toFixed(2)}€) !`;
+                    } else if (cfg.surplusStrategie === 'investissement') {
+                        let moitie = surplus / 2;
+                        cfg.pea += moitie;
+                        cfg.per += moitie;
+                        dernierMessageAlerte = `✨ Surplus réalloué en priorité dans les Investissements (+${moitie.toFixed(2)}€ PEA, +${moitie.toFixed(2)}€ PER) !`;
+                    } else {
+                        let partLoisirs = surplus / 2;
+                        let resteInvest = surplus / 2;
+                        let moitieInv = resteInvest / 2;
+                        cfg.loisirs += partLoisirs;
+                        cfg.pea += moitieInv;
+                        cfg.per += moitieInv;
+                        dernierMessageAlerte = `✨ Surplus réparti en 50/50 (Loisirs +${partLoisirs.toFixed(2)}€, Investissements +${resteInvest.toFixed(2)}€) !`;
+                    }
+                } else {
+                    dernierMessageAlerte = `✨ Surplus réinjecté dans l'Alimentation et les Abonnements jusqu'à leurs cibles !`;
+                }
+            } else {
+                dernierMessageAlerte = `✅ L'option ${dureeCible} Ans est déjà exactement à l'objectif de ${cfg.objectifResteAVivre}€ !`;
+            }
+
+            render();
+        }
+
+        function render() {
+            if (cfg.salaireNet === 0) {
+                const brutTotal = cfg.salaireBrut + cfg.primeAnciennete;
+                cfg.salaireNet = (brutTotal * 0.78) * (1 - (cfg.tauxPas / 100));
+            }
+
+            document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+            if(document.getElementById(`btn-${modeActuel}`)) {
+                document.getElementById(`btn-${modeActuel}`).classList.add('active');
+            }
+
+            const content = document.getElementById('app-content');
+            
+            const fraisNotaireCalculés = cfg.prixAnnonce * (cfg.fraisNotaireTaux / 100);
+            const coutTotalProjetBase = cfg.prixAnnonce + fraisNotaireCalculés + cfg.travaux;
+            const capitalEmprunte = Math.max(0, (cfg.montantProjet > 0 ? cfg.montantProjet : coutTotalProjetBase) - cfg.apport);
+
+            const m10 = calculerPret(capitalEmprunte, cfg.taeg - 0.5, 10);
+            const m15 = calculerPret(capitalEmprunte, cfg.taeg - 0.3, 15);
+            const m20 = calculerPret(capitalEmprunte, cfg.taeg, 20);
+            const m25 = calculerPret(capitalEmprunte, cfg.taeg + 0.2, 25);
+            const m30 = calculerPret(capitalEmprunte, cfg.taeg + 0.4, 30);
+            
+            const assuranceMensuelle = (capitalEmprunte * (cfg.assuranceTauxAnnuel / 100)) / 12;
+            
+            const logBase10 = m10 + assuranceMensuelle + cfg.copro + cfg.taxe;
+            const logBase15 = m15 + assuranceMensuelle + cfg.copro + cfg.taxe;
+            const logBase20 = m20 + assuranceMensuelle + cfg.copro + cfg.taxe;
+            const logBase25 = m25 + assuranceMensuelle + cfg.copro + cfg.taxe;
+            const logBase30 = m30 + assuranceMensuelle + cfg.copro + cfg.taxe;
+
+            const totalLog10 = (cfg.possedeImmo ? logBase10 : cfg.loyerActuel) + cfg.internet + cfg.transport;
+            const totalLog15 = (cfg.possedeImmo ? logBase15 : cfg.loyerActuel) + cfg.internet + cfg.transport;
+            const totalLog20 = (cfg.possedeImmo ? logBase20 : cfg.loyerActuel) + cfg.internet + cfg.transport;
+            const totalLog25 = (cfg.possedeImmo ? logBase25 : cfg.loyerActuel) + cfg.internet + cfg.transport;
+            const totalLog30 = (cfg.possedeImmo ? logBase30 : cfg.loyerActuel) + cfg.internet + cfg.transport;
+            
+            const totalInvest = cfg.pea + cfg.per + cfg.bitstack + cfg.lep;
+            let totalAbosCalcul = abonnementsVie.reduce((acc, a) => acc + a.montant, 0);
+            const totalVie = cfg.courses + cfg.loisirs + totalAbosCalcul;
+            
+            const reste10 = cfg.salaireNet - totalLog10 - totalInvest - totalVie;
+            const reste15 = cfg.salaireNet - totalLog15 - totalInvest - totalVie;
+            const reste20 = cfg.salaireNet - totalLog20 - totalInvest - totalVie;
+            const reste25 = cfg.salaireNet - totalLog25 - totalInvest - totalVie;
+            const reste30 = cfg.salaireNet - totalLog30 - totalInvest - totalVie;
+
+            const makeInput = (name, val) => `
+                <div class="input-wrapper">
+                    <input type="number" step="any" name="${name}" value="${val}">
+                    <button type="button" class="reset-btn" onclick="resetField('${name}')" title="Mettre à zéro">✖</button>
+                </div>
+            `;
+
+            let tablePatSuppHtml = '';
+            patrimoineSupplementaire.forEach((item, index) => {
+                tablePatSuppHtml += `<tr class="row-patsupp">
+                    <td><input type="text" value="${item.nom}" class="inp-patsupp-nom" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:100%;"></td>
+                    <td><input type="number" step="any" value="${item.valeur}" class="inp-patsupp-val" oninput="patrimoineSupplementaire[${index}].valeur = parseFloat(this.value) || 0;" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:100%;"></td>
+                    <td><button type="button" class="del-btn" onclick="supprimerLignePatrimoineSupp(${index})">Supprimer</button></td>
+                </tr>`;
+            });
+
+            let optionsComptesDispoHtml = '';
+            comptesDispo.forEach(c => {
+                optionsComptesDispoHtml += `<option value="${c.nom}" ${cfg.depenseFuturCompteCible === c.nom ? 'selected' : ''}>${c.nom}</option>`;
+            });
+
+            let formHtml = `
+                <form onsubmit="sauvegarderFormulaire(event)">
+                    <div class="form-section-card">
+                        <div class="form-section-title">💶 1. Salaires & Revenus Mensuels</div>
+                        <div class="form-grid-inner">
+                            <div class="form-group"><label>Salaire Brut (€)</label>${makeInput('salaireBrut', cfg.salaireBrut)}</div>
+                            <div class="form-group"><label>Prime d'ancienneté (€)</label>${makeInput('primeAnciennete', cfg.primeAnciennete)}</div>
+                            <div class="form-group"><label>Prélèvement à la source (%)</label>${makeInput('tauxPas', cfg.tauxPas)}</div>
+                            <div class="form-group"><label>Salaire Net Réel (Calculé)</label><div class="input-wrapper"><input type="number" step="any" name="salaireNet" value="${cfg.salaireNet.toFixed(2)}" readonly style="color:#4ade80;"></div></div>
+                        </div>
+                    </div>
+
+                    <div class="form-section-card ${!cfg.possedeImmo ? 'disabled-section' : ''}" id="section-immo-card">
+                        <div class="form-section-title">
+                            <span>🏡 2. Projet Immobilier & Paramètres de Crédit</span>
+                            <div style="display:flex; align-items:center; gap:8px; font-size:12px; font-weight:normal; background:#1e293b; padding:4px 10px; border:1px solid #ef4444; border-radius:4px;">
+                                <input type="checkbox" id="chk-possede-immo-toggle" name="possedeImmo" ${cfg.possedeImmo ? 'checked' : ''} onchange="toggleImmoCheckbox()" style="width:16px; height:16px; cursor:pointer; accent-color:#ef4444; pointer-events:auto;" class="immo-toggle-master-btn">
+                                <label for="chk-possede-immo-toggle" style="color:#fca5a5; font-weight:bold; cursor:pointer; margin:0; pointer-events:auto;" class="immo-toggle-master-btn">Activer Mode Projet Immobilier</label>
+                            </div>
+                        </div>
+                        <div class="form-grid-inner">
+                            <div class="form-group"><label>Date début du projet (AAAA-MM)</label><div class="input-wrapper"><input type="text" id="inp-date-projet" value="${cfg.dateDebutProjet}" oninput="synchroniserDonneesDynamiques()"></div></div>
+                            <div class="form-group"><label>Prix Affiché Annonce / FAI (€)</label>${makeInput('prixAnnonce', cfg.prixAnnonce)}</div>
+                            <div class="form-group"><label>Prix Net Vendeur (€)</label>${makeInput('prixNetVendeur', cfg.prixNetVendeur)}</div>
+                            <div class="form-group"><label>Taux Frais Notaire (%)</label>${makeInput('fraisNotaireTaux', cfg.fraisNotaireTaux)}</div>
+                            <div class="form-group"><label>Travaux (€)</label>${makeInput('travaux', cfg.travaux)}</div>
+                            <div class="form-group"><label>Taux de base crédit (%)</label>${makeInput('taux', cfg.taux)}</div>
+                            <div class="form-group"><label>Apport Objectif (€)</label>${makeInput('apport', cfg.apport)}</div>
+                            <div class="form-group"><label>TAEG global (%)</label>${makeInput('taeg', cfg.taeg)}</div>
+                            <div class="form-group"><label>Assurance emprunteur (%/an)</label>${makeInput('assuranceTauxAnnuel', cfg.assuranceTauxAnnuel)}</div>
+                            <div class="form-group"><label>Charges Copropriété (€)</label>${makeInput('copro', cfg.copro)}</div>
+                            <div class="form-group"><label>Taxe Foncière (€)</label>${makeInput('taxe', cfg.taxe)}</div>
+                            <div class="form-group"><label>Montant Projet Cible Libre (€)</label>${makeInput('montantProjet', cfg.montantProjet)}</div>
+                        </div>
+                    </div>
+
+                    <div class="form-section-card">
+                        <div class="form-section-title">✈️ 3. Dépense Future / Exceptionnelle (ex: Vacances)</div>
+                        <div class="form-grid-inner">
+                            <div class="form-group"><label>Nom de la dépense future</label><div class="input-wrapper"><input type="text" id="inp-depense-nom" value="${cfg.depenseFuturNom}" oninput="synchroniserDonneesDynamiques()"></div></div>
+                            <div class="form-group"><label>Montant de la dépense (€)</label><div class="input-wrapper"><input type="number" step="any" id="inp-depense-montant" value="${cfg.depenseFuturMontant}" oninput="synchroniserDonneesDynamiques()"></div></div>
+                            <div class="form-group"><label>Compte prélevé (Livret A, LEP...)</label>
+                                <div class="input-wrapper">
+                                    <select id="sel-depense-compte" onchange="synchroniserDonneesDynamiques()" style="background:transparent; border:none; color:white; padding:6px; width:100%; outline:none; box-sizing:border-box;">
+                                        ${optionsComptesDispoHtml}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section-card">
+                        <div class="form-section-title">🛒 4. Charges Courantes & Vie Quotidienne</div>
+                        <div class="form-grid-inner">
+                            <div class="form-group"><label>Loyer Actuel (€) (Si non propriétaire)</label>${makeInput('loyerActuel', cfg.loyerActuel)}</div>
+                            <div class="form-group"><label>Abonnement Internet (€)</label>${makeInput('internet', cfg.internet)}</div>
+                            <div class="form-group"><label>Transport (€)</label>${makeInput('transport', cfg.transport)}</div>
+                            <div class="form-group"><label>Courses / Alimentation (€)</label>${makeInput('courses', cfg.courses)}</div>
+                            <div class="form-group"><label>Loisirs / Sorties (€)</label>${makeInput('loisirs', cfg.loisirs)}</div>
+                        </div>
+                    </div>
+
+                    <div class="form-section-card">
+                        <div class="form-section-title">📈 5. Épargne & Investissements (Versements Mensuels)</div>
+                        <div class="form-grid-inner">
+                            <div class="form-group"><label>Épargne PEA mensuelle (€) [Par mois]</label>${makeInput('pea', cfg.pea)}</div>
+                            <div class="form-group"><label>Épargne PER mensuelle (€) [Par mois]</label>${makeInput('per', cfg.per)}</div>
+                            <div class="form-group"><label>Épargne Bitstack mensuelle (€) [Par mois]</label>${makeInput('bitstack', cfg.bitstack)}</div>
+                            <div class="form-group"><label>Épargne LEP mensuelle (€) [Par mois]</label>${makeInput('lep', cfg.lep)}</div>
+                        </div>
+                    </div>
+
+                    <div class="form-section-card">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <span style="color:#38bdf8; font-weight:bold; font-size:13px;">🎁 6. Patrimoine Supplémentaire (Cartes, art, véhicules...)</span>
+                            <button type="button" class="action-btn" onclick="ajouterLignePatrimoineSupp()" style="margin:0; padding:4px 8px; font-size:11px;">+ Ajouter un actif</button>
+                        </div>
+                        <table id="table-patsupp" style="margin:0;">
+                            <tr><th>Nom / Description</th><th>Valeur (€)</th><th>Action</th></tr>
+                            ${tablePatSuppHtml}
+                        </table>
+                    </div>
+
+                    <div style="background:#0f172a; padding:12px; border-radius:6px; margin-bottom:15px; border:1px solid #334155;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <span style="color:#38bdf8; font-weight:bold; font-size:13px;">Abonnements & Dépenses récurrentes (WoW, Salle de sport, etc.)</span>
+                            <button type="button" class="action-btn" onclick="ajouterAbonnement()" style="margin:0; padding:4px 8px; font-size:11px;">+ Ajouter abonnement</button>
+                        </div>
+                        <table id="table-abos" style="margin:0;">
+                            <tr><th>Libellé</th><th>Montant (€ / mois)</th><th>Action</th></tr>`;
+            
+            abonnementsVie.forEach((abo, index) => {
+                let styleAbo = abo.montant === 0 ? 'color: #ef4444; font-weight: bold; background: rgba(239, 68, 68, 0.1);' : '';
+                let badgeSuppr = abo.montant === 0 ? ' <span style="font-size:10px; background:#ef4444; color:white; padding:2px 6px; border-radius:4px; margin-left:5px;">À SUPPRIMER</span>' : '';
+                formHtml += `<tr class="row-abo" style="${styleAbo}">
+                    <td><input type="text" value="${abo.nom}" class="inp-abo-nom" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:100%;"></td>
+                    <td><div style="display:flex; align-items:center; gap:5px;"><input type="number" step="any" value="${abo.montant}" class="inp-abo-val" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:100%;"> ${badgeSuppr}</div></td>
+                    <td><button type="button" class="del-btn" onclick="supprimerAbonnement(${index})">Supprimer</button></td>
+                </tr>`;
+            });
+            formHtml += `</table></div>
+
+                    <button type="submit" class="action-btn">Mettre à jour le budget</button>
+                </form>
+            `;
+
+            let sectionIAHtml = '';
+            if (modeActuel === 'ia') {
+                sectionIAHtml = `<div class="card" style="border:2px dashed #38bdf8; background:#0b0f19;">
+                    <h3 style="margin-top:0; color:#38bdf8;">🤖 Smart AI Budget Optimizer - Mode Arcade</h3>
+                    <div style="font-size:13px; color:#cbd5e1; margin-bottom:15px;">
+                        Choisis l'option cible de durée, définis ton objectif de sécurité, puis clique sur le bouton rouge pour rééquilibrer précisément cette option sans toucher aux autres ! 🎮
+                    </div>
+                </div>`;
+            }
+
+            let projetHtml = '';
+            if (modeActuel === 'projet') {
+                let totalDispoBrut = comptesDispo.reduce((acc, c) => acc + c.solde, 0);
+                let totalDispo = totalDispoBrut - cfg.depenseFuturMontant;
+                let totalBloque = placementsBloques.reduce((acc, p) => acc + p.solde, 0);
+
+                let dateDuJourStr = "8 août 2026";
+                let anneeActuelleNum = 2026;
+                let moisActuelNum = 8;
+
+                let partsDate = cfg.dateDebutProjet.split('-');
+                let anneeDebutImmo = parseInt(partsDate[0]) || 2027;
+                let moisDebutImmo = parseInt(partsDate[1]) || 8;
+
+                let diffMois = (anneeActuelleNum - anneeDebutImmo) * 12 + (moisActuelNum - moisDebutImmo);
+                let estimationReventeInstantT = 0;
+
+                if (diffMois > 0 && cfg.possedeImmo) {
+                    let rM = cfg.taeg / 100 / 12;
+                    let mensualiteImmo = m20; 
+                    let capRestant = capitalEmprunte;
+                    let capitalRembourseInstantT = 0;
+                    for(let mIdx = 0; mIdx < diffMois; mIdx++) {
+                        let interetsMois = capRestant * rM;
+                        let partAmortissement = mensualiteImmo - interetsMois;
+                        capitalRembourseInstantT += partAmortissement;
+                        capRestant -= partAmortissement;
+                    }
+                    capitalRembourseInstantT = Math.min(capitalEmprunte, Math.max(0, capitalRembourseInstantT));
+                    let anneesEcoulees = diffMois / 12;
+                    let valeurBienEstimee = cfg.prixAnnonce * Math.pow(1.015, anneesEcoulees);
+                    let capitalRestantDu = Math.max(0, capitalEmprunte - capitalRembourseInstantT);
+                    estimationReventeInstantT = valeurBienEstimee - capitalRestantDu - (valeurBienEstimee * 0.05);
+                } else {
+                    estimationReventeInstantT = 0;
+                }
+
+                let totalPatrimoineSupp = patrimoineSupplementaire.reduce((acc, item) => acc + item.valeur, 0);
+                let patrimoineTotalInstantT = estimationReventeInstantT + totalDispo + totalBloque + totalPatrimoineSupp;
+
+                const calculerFuturCompte = (soldeActuel, versementPerso, versementExterne, tauxAnnuel, annees) => {
+                    let r = tauxAnnuel / 100 / 12;
+                    let n = annees * 12;
+                    let total = soldeActuel * Math.pow(1 + r, n);
+                    let versementTotalMensuel = versementPerso + versementExterne;
+                    for (let i = 0; i < n; i++) {
+                        total += versementTotalMensuel * Math.pow(1 + r, n - i);
+                    }
+                    return total;
+                };
+
+                let jalonsAnnees = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60];
+                let blocksProjetHtml = '';
+                
+                let graphiquePointsInvest = [];
+                let graphiquePointsCible = [];
+                let valeurInitialeTotale = totalDispo + totalBloque + totalPatrimoineSupp;
+
+                let tousPlacements = [...placementsBloques, ...comptesDispo];
+                
+                blocksProjetHtml += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; margin-top: 10px;">';
+                tousPlacements.forEach((p, idx) => {
+                    let soldePrisEnCompte = p.solde;
+                    if (p.nom === cfg.depenseFuturCompteCible) {
+                        soldePrisEnCompte = Math.max(0, p.solde - cfg.depenseFuturMontant);
+                    }
+                    
+                    let resultatsJalons = jalonsAnnees.map(an => calculerFuturCompte(soldePrisEnCompte, p.versementMensuel || 0, p.virementExterne || 0, p.rendement, an));
+                    
+                    blocksProjetHtml += `
+                        <div style="background:#0f172a; border:1px solid #334155; padding:12px; border-radius:6px; display: flex; flex-direction: column; justify-content: space-between;">
+                            <div>
+                                <div style="font-weight:bold; color:#38bdf8; font-size:13px; margin-bottom: 6px;">${p.nom}</div>
+                                <div style="font-size:11px; color:#94a3b8; margin-bottom: 8px;">Actuel: ${soldePrisEnCompte.toFixed(2)}€ | Vers: +${(p.versementMensuel||0).toFixed(2)}€/m | Ext: +${(p.virementExterne||0).toFixed(2)}€/m | Rend: ${p.rendement}%</div>
+                            </div>
+                            <div style="font-size:11px; color:#cbd5e1; border-top: 1px solid #334155; padding-top: 6px; display: flex; flex-wrap: wrap; gap: 6px;">
+                                ${jalonsAnnees.map((an, iId) => `<span><b>${an === 1 ? 'An 1' : `${an} ans`}</b> : <b style="color:#4ade80;">${resultatsJalons[iId].toFixed(0)}€</b></span>`).join(' | ')}
+                            </div>
+                        </div>
+                    `;
+                });
+                blocksProjetHtml += '</div>';
+
+                jalonsAnnees.forEach((an, idx) => {
+                    let sommeGlobalAn = 0;
+                    tousPlacements.forEach(p => {
+                        let s = p.solde;
+                        if (p.nom === cfg.depenseFuturCompteCible) s = Math.max(0, s - cfg.depenseFuturMontant);
+                        sommeGlobalAn += calculerFuturCompte(s, p.versementMensuel || 0, p.virementExterne || 0, p.rendement, an);
+                    });
+                    sommeGlobalAn += totalPatrimoineSupp;
+                    graphiquePointsInvest.push(sommeGlobalAn);
+                    graphiquePointsCible.push(valeurInitialeTotale * Math.pow(1.05, an) + (an * 5000));
+                });
+
+                let epargneDispoActuelle = 0;
+                comptesDispo.forEach(c => {
+                    let soldeCompte = c.solde;
+                    if (c.nom === cfg.depenseFuturCompteCible) {
+                        soldeCompte = Math.max(0, c.solde - cfg.depenseFuturMontant);
+                    }
+                    let nomC = c.nom.toUpperCase();
+                    if (nomC.includes('LIVRET A') || nomC.includes('LEP') || nomC.includes('COURANT') || nomC.includes('DISPONIBLE')) {
+                        epargneDispoActuelle += soldeCompte;
+                    }
+                });
+
+                let totalAbosActuels = abonnementsVie.reduce((acc, a) => acc + a.montant, 0);
+                let totalChargesVieActuelles = cfg.loyerActuel + cfg.internet + cfg.transport + cfg.courses + cfg.loisirs + totalAbosActuels;
+                let capaciteEpargneActuelleLocataire = cfg.salaireNet - totalChargesVieActuelles;
+
+                let objectifApport = cfg.apport;
+                
+                let moisNomsComplets = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+                
+                let getMoisAnneeCibleStr = (nbMoisTotal) => {
+                    if (nbMoisTotal <= 0) return "Atteint dès aujourd'hui (août 2026)";
+                    let totalMoisCible = (moisActuelNum - 1) + nbMoisTotal;
+                    let cibleAnnee = anneeActuelleNum + Math.floor(totalMoisCible / 12);
+                    let cibleMoisIdx = totalMoisCible % 12;
+                    return `${moisNomsComplets[cibleMoisIdx]} ${cibleAnnee} (${nbMoisTotal} mois)`;
+                };
+
+                let manquantApportSeul = Math.max(0, objectifApport - epargneDispoActuelle);
+                let moisApportSeul = 0;
+                if (manquantApportSeul > 0 && capaciteEpargneActuelleLocataire > 0) {
+                    moisApportSeul = Math.ceil(manquantApportSeul / capaciteEpargneActuelleLocataire);
+                }
+                let dateApportSeulStr = getMoisAnneeCibleStr(moisApportSeul);
+
+                let objectifAvecSecu = objectifApport + 2000;
+                let manquantAvecSecu = Math.max(0, objectifAvecSecu - epargneDispoActuelle);
+                let moisAvecSecu = 0;
+                if (manquantAvecSecu > 0 && capaciteEpargneActuelleLocataire > 0) {
+                    moisAvecSecu = Math.ceil(manquantAvecSecu / capaciteEpargneActuelleLocataire);
+                }
+                let dateAvecSecuStr = getMoisAnneeCibleStr(moisAvecSecu);
+
+                let totalBloquesActuels = placementsBloques.reduce((acc, p) => acc + p.solde, 0);
+                let montantPiocherBloque = 0;
+                let cibleApportAvecSecuPiochage = epargneDispoActuelle >= objectifApport ? objectifApport + 2000 : objectifApport;
+                let manquantTotalPiochage = Math.max(0, cibleApportAvecSecuPiochage - epargneDispoActuelle);
+                
+                if (manquantTotalPiochage > 0) {
+                    if (epargneDispoActuelle + totalBloquesActuels >= cibleApportAvecSecuPiochage) {
+                        montantPiocherBloque = Math.max(0, manquantTotalPiochage - epargneDispoActuelle);
+                    } else {
+                        montantPiocherBloque = totalBloquesActuels;
+                    }
+                }
+
+                let tableDispoHtml = '';
+                comptesDispo.forEach((c, index) => {
+                    tableDispoHtml += `<tr class="row-dispo">
+                        <td><input type="text" value="${c.nom}" class="inp-nom" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:100%;"></td>
+                        <td><input type="number" step="any" value="${c.solde}" class="inp-solde" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:100%;"></td>
+                        <td><input type="number" step="any" value="${c.versementMensuel || 0}" class="inp-versement" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:100%;"></td>
+                        <td><input type="number" step="any" value="${c.virementExterne || 0}" class="inp-virement-externe" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:100%;"></td>
+                        <td><input type="number" step="any" value="${c.rendement}" class="inp-rendement" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:60px;"> %</td>
+                        <td><button type="button" class="del-btn" onclick="supprimerCompteDispo(${index})">Supprimer</button></td>
+                    </tr>`;
+                });
+
+                let tableBloqueHtml = '';
+                placementsBloques.forEach((p, index) => {
+                    tableBloqueHtml += `<tr class="row-bloque">
+                        <td><input type="text" value="${p.nom}" class="inp-nom" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:100%;"></td>
+                        <td><input type="number" step="any" value="${p.solde}" class="inp-solde" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:100%;"></td>
+                        <td><input type="number" step="any" value="${p.versementMensuel}" class="inp-versement" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:100%;"></td>
+                        <td><input type="number" step="any" value="${p.virementExterne || 0}" class="inp-virement-externe" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:100%;"></td>
+                        <td><input type="number" step="any" value="${p.rendement}" class="inp-rendement" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:60px;"> %</td>
+                        <td><button type="button" class="del-btn" onclick="supprimerPlacementBloque(${index})">Supprimer</button></td>
+                    </tr>`;
+                });
+
+                let svgWidth = 800;
+                let svgHeight = 160;
+                let maxValGraph = Math.max(...graphiquePointsInvest, ...graphiquePointsCible, 10000);
+                let minValGraph = 0;
+                
+                let pointsInvestSvg = graphiquePointsInvest.map((val, idx) => {
+                    let x = 50 + (idx / (jalonsAnnees.length - 1)) * (svgWidth - 100);
+                    let y = svgHeight - 35 - ((val - minValGraph) / (maxValGraph - minValGraph || 1)) * (svgHeight - 55);
+                    return `${x},${y}`;
+                }).join(' ');
+
+                let pointsCibleSvg = graphiquePointsCible.map((val, idx) => {
+                    let x = 50 + (idx / (jalonsAnnees.length - 1)) * (svgWidth - 100);
+                    let y = svgHeight - 35 - ((val - minValGraph) / (maxValGraph - minValGraph || 1)) * (svgHeight - 55);
+                    return `${x},${y}`;
+                }).join(' ');
+
+                projetHtml = `
+                    <div class="card" style="border: 2px solid #38bdf8; background: linear-gradient(135deg, #0f172a, #1e293b); box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);">
+                        <h2 style="margin-top:0; color:#38bdf8; text-transform:uppercase; text-align:center; font-size: 1.2rem;">ESTIMATION PATRIMOINE TOTALE (Aujourd'hui - ${dateDuJourStr})</h2>
+                        <div style="font-size: 28px; font-weight: 900; color: #4ade80; text-align: center; margin: 10px 0;">
+                            ${patrimoineTotalInstantT.toFixed(2)} €
+                        </div>
+                        <div style="font-size: 12px; color: #94a3b8; text-align: center; margin-bottom: 15px;">
+                            Cumul réel actuel de vos comptes disponibles ${cfg.depenseFuturMontant > 0 ? `(déduction faite de ${cfg.depenseFuturMontant}€ pour ${cfg.depenseFuturNom} sur ${cfg.depenseFuturCompteCible})` : ''}, placements bloqués et patrimoine supplémentaire.
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; font-size: 12px; margin-bottom: 15px;">
+                            <div style="background:#0f172a; padding:10px; border-radius:6px;">Valeur Nette Immo / Revente : <b style="color:#38bdf8;">${estimationReventeInstantT.toFixed(2)} €</b></div>
+                            <div style="background:#0f172a; padding:10px; border-radius:6px;">Total Comptes Disponibles : <b style="color:#38bdf8;">${totalDispo.toFixed(2)} €</b> ${cfg.depenseFuturMontant > 0 ? `<span style="font-size:10px; color:#f87171;">(-${cfg.depenseFuturMontant}€)</span>` : ''}</div>
+                            <div style="background:#0f172a; padding:10px; border-radius:6px;">Total Placements Bloqués : <b style="color:#38bdf8;">${totalBloque.toFixed(2)} €</b></div>
+                            <div style="background:#0f172a; padding:10px; border-radius:6px;">Total Patrimoine Supplémentaire : <b style="color:#4ade80;">${totalPatrimoineSupp.toFixed(2)} €</b></div>
+                        </div>
+
+                        <div style="background:#0b0f19; padding:15px; border-radius:6px; margin-top:20px; border:1px solid #334155;">
+                            <h3 style="margin-top:0; color:#38bdf8; font-size:1rem; text-align:center;">📈 Courbe d'Évolution du Patrimoine (Investissement vs Valeur Visée)</h3>
+                            <div style="display:flex; justify-content:center; gap:20px; font-size:12px; margin-bottom:10px;">
+                                <span style="color:#4ade80; font-weight:bold;">● Courbe Investissement / Actifs</span>
+                                <span style="color:#f87171; font-weight:bold;">● Valeur Cible Visée</span>
+                            </div>
+                            <div style="width:100%; overflow-x:auto;">
+                                <svg viewBox="0 0 ${svgWidth} ${svgHeight}" style="width:100%; height:auto; min-width:600px;">
+                                    <line x1="50" y1="10" x2="50" y2="${svgHeight-25}" stroke="#334155" stroke-width="1" />
+                                    <line x1="50" y1="${svgHeight-25}" x2="${svgWidth-20}" y2="${svgHeight-25}" stroke="#334155" stroke-width="1" />
+                                    <polyline fill="none" stroke="#f87171" stroke-width="2" stroke-dasharray="4" points="${pointsCibleSvg}" />
+                                    <polyline fill="none" stroke="#4ade80" stroke-width="3" points="${pointsInvestSvg}" />
+                                    ${jalonsAnnees.map((an, idx) => {
+                                        let x = 50 + (idx / (jalonsAnnees.length - 1)) * (svgWidth - 100);
+                                        let valInvest = graphiquePointsInvest[idx];
+                                        let yInvest = svgHeight - 35 - ((valInvest - minValGraph) / (maxValGraph - minValGraph || 1)) * (svgHeight - 55);
+                                        let montantAffiche = valInvest >= 1000000 ? (valInvest/1000000).toFixed(1) + 'M€' : (valInvest >= 1000 ? Math.round(valInvest/1000) + 'k€' : Math.round(valInvest) + '€');
+                                        let libelleAn = an === 1 ? 'An 1' : `${an}a`;
+                                        return `
+                                            <circle cx="${x}" cy="${yInvest}" r="3.5" fill="#4ade80" />
+                                            <text x="${x}" y="${yInvest - 7}" fill="#4ade80" font-size="8" font-weight="bold" text-anchor="middle">${montantAffiche}</text>
+                                            <text x="${x}" y="${svgHeight-10}" fill="#94a3b8" font-size="9" text-anchor="middle">${libelleAn}</text>
+                                        `;
+                                    }).join('')}
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" style="border: 2px solid #4ade80; background: #0f172a;">
+                        <h3 style="margin-top:0; color:#4ade80;">🎯 Stratégie d'Atteinte de l'Apport (Statut Locataire Actuel)</h3>
+                        <div style="font-size: 12px; color: #cbd5e1; margin-bottom: 12px;">
+                            Analyse basée sur votre loyer actuel (${cfg.loyerActuel}€), vos revenus actuels (${cfg.salaireNet.toFixed(2)}€ net), vos comptes de liquidité et la dépense future (${cfg.depenseFuturNom} : ${cfg.depenseFuturMontant}€ sur ${cfg.depenseFuturCompteCible}).
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; font-size: 13px;">
+                            <div style="background:#1e293b; padding:12px; border-radius:6px;">Objectif d'Apport Cible : <br><b style="color:#38bdf8; font-size:1.2em;">${objectifApport.toFixed(2)} €</b></div>
+                            <div style="background:#1e293b; padding:12px; border-radius:6px;">Épargne Disponible Actuelle : <br><b style="color:#4ade80; font-size:1.2em;">${epargneDispoActuelle.toFixed(2)} €</b></div>
+                            <div style="background:#1e293b; padding:12px; border-radius:6px;">Capacité d'épargne mensuelle : <br><b style="color:#38bdf8; font-size:1.2em;">${capaciteEpargneActuelleLocataire.toFixed(2)} € / mois</b></div>
+                            
+                            <div style="background:#1e293b; padding:14px; border-radius:6px; grid-column: 1 / -1; border: 1px solid #38bdf8;">
+                                <b style="color:#38bdf8; font-size:1.1em; display:block; margin-bottom:6px;">📌 Scénario 1 : Piocher dans les investissements bloqués</b>
+                                ${manquantTotalPiochage > 0 ? `Montant exact à retirer dans vos placements bloqués : <b style="color:#f87171; font-size:1.2em;">${montantPiocherBloque.toFixed(2)} €</b>` : `Objectif déjà atteint sans avoir à piocher dans les placements bloqués !`}
+                            </div>
+
+                            <div style="background:#1e293b; padding:14px; border-radius:6px; grid-column: 1 / -1; border: 1px solid #4ade80;">
+                                <b style="color:#4ade80; font-size:1.1em; display:block; margin-bottom:6px;">📌 Scénario 2 : Avec l'argent non bloqué uniquement</b>
+                                <div style="margin-top:6px; font-size:13px;">
+                                    • Date estimée (Apport seul de ${objectifApport}€) : <b style="color:#38bdf8;">${dateApportSeulStr}</b><br>
+                                    • <span style="color:#fcd34d;">💡 Conseil expert :</span> Avec <b style="color:#fcd34d;">2000€ de sécurité</b> en plus (${objectifAvecSecu}€) : <b style="color:#4ade80;">${dateAvecSecuStr}</b>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" style="border: 2px solid #38bdf8; background: #0f172a; padding: 20px; border-radius: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #334155; padding-bottom: 12px;">
+                            <div>
+                                <h3 style="margin: 0; color: #38bdf8; font-size: 1.1rem; text-transform: uppercase;">📊 Estimations & Projections des Investissements</h3>
+                                <span style="font-size: 11px; color: #94a3b8;">Suivi de la performance de vos placements à long terme</span>
+                            </div>
+                            <button type="button" class="action-btn" onclick="sauvegarderFormulaire(null)" style="background:#0284c7; margin:0; padding:6px 12px;">🔄 Recalculer le budget complet</button>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 25px;">
+                            <div style="background:#1e293b; padding:15px; border-radius:6px; border-left: 4px solid #38bdf8;">
+                                <div style="font-size:11px; color:#94a3b8; text-transform: uppercase; font-weight: bold;">Capacité Épargne Mensuelle</div>
+                                <div style="font-size:20px; font-weight:bold; color:#38bdf8; margin-top:5px;">+${(totalInvest).toFixed(2)} € / mois</div>
+                            </div>
+                            <div style="background:#1e293b; padding:15px; border-radius:6px; border-left: 4px solid #4ade80;">
+                                <div style="font-size:11px; color:#94a3b8; text-transform: uppercase; font-weight: bold;">Patrimoine Global Actuel</div>
+                                <div style="font-size:20px; font-weight:bold; color:#4ade80; margin-top:5px;">${(totalDispo + totalBloque).toFixed(2)} €</div>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 25px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:5px;">
+                                <span style="color:#f8fafc; font-weight:bold; font-size:14px;">1. Comptes Disponibles (Total : <b style="color:#38bdf8;">${totalDispo.toFixed(2)} €</b>)</span>
+                                <button type="button" class="action-btn" onclick="ajouterCompteDispo()" style="margin:0; padding:4px 8px; font-size:11px;">+ Ajouter un compte</button>
+                            </div>
+                            <div style="overflow-x: auto;">
+                                <table id="table-dispo" style="margin:0;">
+                                    <tr><th>Nom</th><th>Solde (€)</th><th>Versement Perso (€/m)</th><th>Virement Externe (€/m)</th><th>Rendement (%)</th><th>Action</th></tr>
+                                    ${tableDispoHtml}
+                                </table>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 20px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:5px;">
+                                <span style="color:#f8fafc; font-weight:bold; font-size:14px;">2. Placements Bloqués & Projections (Total : <b style="color:#38bdf8;">${totalBloque.toFixed(2)} €</b>)</span>
+                                <button type="button" class="action-btn" onclick="ajouterPlacementBloque()" style="margin:0; padding:4px 8px; font-size:11px;">+ Ajouter un placement</button>
+                            </div>
+                            <div style="overflow-x: auto;">
+                                <table id="table-bloque" style="margin:0;">
+                                    <tr><th>Placement</th><th>Solde (€)</th><th>Versement Perso (€/m)</th><th>Virement Externe (€/m)</th><th>Rendement (%)</th><th>Action</th></tr>
+                                    ${tableBloqueHtml}
+                                </table>
+                            </div>
+                            
+                            <div style="margin-top: 15px;">
+                                ${blocksProjetHtml}
+                            </div>
+                        </div>
+                    </div>`;
+
+                if (cfg.possedeImmo) {
+                    const fraisNotaireVal = cfg.prixAnnonce * (cfg.fraisNotaireTaux / 100);
+                    const coutTotalSansCredit = cfg.prixAnnonce + fraisNotaireVal + cfg.travaux;
+                    
+                    const calcDetailImmo = (cap, tauxAnnuel, duree) => {
+                        const m = calculerPret(cap, tauxAnnuel, duree);
+                        const totalVerse = m * duree * 12;
+                        const assuranceTotale = (cap * (cfg.assuranceTauxAnnuel / 100)) * duree;
+                        const montantInterets = (totalVerse - cap) + assuranceTotale;
+                        const coutGlobalProjet = coutTotalSansCredit + montantInterets;
+                        return { m, montantInterets, coutGlobalProjet };
+                    };
+
+                    const det20 = calcDetailImmo(capitalEmprunte, cfg.taeg, 20);
+
+                    projetHtml += `<div class="card">
+                        <h3 style="margin-top:0;">🏠 Bilan Immobilier & Décomposition Détaillée (Exemple Option 20 Ans)</h3>
+                        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px; margin-top:10px; font-size:13px;">
+                            <div style="background:#0f172a; padding:12px; border-radius:6px;">Prix Hors Frais Notaire : <br><b style="color:#38bdf8; font-size:1.2em;">${cfg.prixAnnonce.toFixed(0)} €</b></div>
+                            <div style="background:#0f172a; padding:12px; border-radius:6px;">Frais de Notaire (${cfg.fraisNotaireTaux}%) : <br><b style="color:#38bdf8; font-size:1.2em;">${fraisNotaireVal.toFixed(0)} €</b></div>
+                            <div style="background:#0f172a; padding:12px; border-radius:6px;">Travaux : <br><b style="color:#38bdf8; font-size:1.2em;">${cfg.travaux.toFixed(0)} €</b></div>
+                            <div style="background:#0f172a; padding:12px; border-radius:6px;">Montant Total Intérêts + Assurance : <br><b style="color:#f87171; font-size:1.2em;">${det20.montantInterets.toFixed(0)} €</b></div>
+                            <div style="background:#0f172a; padding:15px; border-radius:6px; grid-column: 1 / -1; border: 1px solid #4ade80; text-align:center;">
+                                Coût Global du Projet (Apport + Crédit + Frais + Intérêts) : <br>
+                                <b style="color:#4ade80; font-size:1.6em; display:block; margin-top:5px;">${det20.coutGlobalProjet.toFixed(0)} €</b>
+                            </div>
+                        </div>
+
+                        <h3 style="margin-top:20px;">📈 Évolution du capital immo & Revente (Jusqu'à 30 ans) - Basé sur ${cfg.dateDebutProjet}</h3>
+                        <table>
+                            <tr><th>Année</th><th>Date calendaire</th><th>Capital remboursé</th><th>Patrimoine Net (Apport + Remboursé)</th><th>Estimation Revente (Net)</th><th>Estimation avec revalorisation du marché (+1.5%/an)</th></tr>
+                    `;
+
+                    let moisNoms = ["Janv", "Févr", "Mars", "Avril", "Mai", "Juin", "Juil", "Août", "Sept", "Oct", "Nov", "Déc"];
+                    let baseParts = cfg.dateDebutProjet.split('-');
+                    let baseAnneeProj = parseInt(baseParts[0]) || 2027;
+                    let baseMoisProj = parseInt(baseParts[1]) || 8;
+
+                    let anneesTab = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30];
+                    anneesTab.forEach(annee => {
+                        let moisEcoules = annee * 12;
+                        let rM = cfg.taeg / 100 / 12;
+                        let capitalRembourse = 0;
+                        if (capitalEmprunte > 0 && rM > 0) {
+                            let mensualite = det20.m;
+                            let capRestant = capitalEmprunte;
+                            for(let mIdx = 0; mIdx < moisEcoules; mIdx++) {
+                                let interetsMois = capRestant * rM;
+                                let partAmortissement = mensualite - interetsMois;
+                                capitalRembourse += partAmortissement;
+                                capRestant -= partAmortissement;
+                            }
+                        }
+                        capitalRembourse = Math.min(capitalEmprunte, Math.max(0, capitalRembourse));
+                        let patrimoineNet = cfg.apport + capitalRembourse;
+                        let valeurBienEstimee = cfg.prixAnnonce * Math.pow(1.015, annee);
+                        let capitalRestantDu = Math.max(0, capitalEmprunte - capitalRembourse);
+                        let estimationReventeNet = valeurBienEstimee - capitalRestantDu - (valeurBienEstimee * 0.05);
+                        let estimationRevalorisationMarche = estimationReventeNet * Math.pow(1.02, annee); 
+
+                        let totalMoisCible = (baseMoisProj - 1) + moisEcoules;
+                        let decAnnee = baseAnneeProj + Math.floor(totalMoisCible / 12);
+                        let decMoisIdx = totalMoisCible % 12;
+                        let dateLibelle = `${moisNoms[decMoisIdx]} ${decAnnee}`;
+
+                        let libelleAnneeTableau = annee === 1 ? 'Année 1' : `Année ${annee}`;
+
+                        projetHtml += `<tr>
+                            <td>${libelleAnneeTableau}</td>
+                            <td style="color:#38bdf8; font-weight:bold;">${dateLibelle}</td>
+                            <td>${capitalRembourse.toFixed(0)} €</td>
+                            <td>${patrimoineNet.toFixed(0)} €</td>
+                            <td style="color:#4ade80; font-weight:bold;">${estimationReventeNet.toFixed(0)} €</td>
+                            <td style="color:#fcd34d; font-weight:bold;">${estimationRevalorisationMarche.toFixed(0)} €</td>
+                        </tr>`;
+                    });
+
+                    projetHtml += `</table></div>`;
+                }
+                projetHtml += `</div>`;
+            }
+
+            let abosHtml = '';
+            abonnementsVie.forEach(abo => {
+                let styleLigneAbo = abo.montant === 0 ? 'background: rgba(239, 68, 68, 0.15); color: #f87171; font-weight: bold;' : '';
+                let badgeLigne = abo.montant === 0 ? ' <span style="font-size:9px; background:#ef4444; color:white; padding:1px 4px; border-radius:3px; vertical-align:middle;">À SUPPRIMER</span>' : '';
+                
+                if (cfg.possedeImmo) {
+                    abosHtml += `<tr style="${styleLigneAbo}"><td>${abo.nom}${badgeLigne}</td><td>-${abo.montant.toFixed(2)} €</td><td>-${abo.montant.toFixed(2)} €</td><td>-${abo.montant.toFixed(2)} €</td><td>-${abo.montant.toFixed(2)} €</td><td>-${abo.montant.toFixed(2)} €</td></tr>`;
+                } else {
+                    abosHtml += `<tr style="${styleLigneAbo}"><td>${abo.nom}${badgeLigne}</td><td>-${abo.montant.toFixed(2)} €</td></tr>`;
+                }
+            });
+
+            const getResteStyle = (val) => {
+                let isOk = val >= 0;
+                let bg = isOk ? 'rgba(74, 222, 128, 0.15)' : 'rgba(239, 68, 68, 0.15)';
+                let color = isOk ? '#4ade80' : '#ef4444';
+                return `background:${bg}; color:${color}; font-size:1.1em; font-weight:900; border: 2px solid ${color};`;
+            };
+
+            let entetesTableau = cfg.possedeImmo ? `
+                <th>Option 10 Ans</th>
+                <th>Option 15 Ans</th>
+                <th>Option 20 Ans</th>
+                <th>Option 25 Ans</th>
+                <th>Option 30 Ans</th>
+            ` : `
+                <th>Budget Locataire Actuel</th>
+            `;
+
+            let cellulesLogement = cfg.possedeImmo ? `
+                <tr><td>Crédit Immobilier</td><td>-${m10.toFixed(2)} €</td><td>-${m15.toFixed(2)} €</td><td>-${m20.toFixed(2)} €</td><td>-${m25.toFixed(2)} €</td><td>-${m30.toFixed(2)} €</td></tr>
+                <tr><td>Assurance Emprunteur</td><td>-${assuranceMensuelle.toFixed(2)} €</td><td>-${assuranceMensuelle.toFixed(2)} €</td><td>-${assuranceMensuelle.toFixed(2)} €</td><td>-${assuranceMensuelle.toFixed(2)} €</td><td>-${assuranceMensuelle.toFixed(2)} €</td></tr>
+                <tr><td>Charges de Copropriété</td><td>-${cfg.copro.toFixed(2)} €</td><td>-${cfg.copro.toFixed(2)} €</td><td>-${cfg.copro.toFixed(2)} €</td><td>-${cfg.copro.toFixed(2)} €</td><td>-${cfg.copro.toFixed(2)} €</td></tr>
+                <tr><td>Taxe Foncière</td><td>-${cfg.taxe.toFixed(2)} €</td><td>-${cfg.taxe.toFixed(2)} €</td><td>-${cfg.taxe.toFixed(2)} €</td><td>-${cfg.taxe.toFixed(2)} €</td><td>-${cfg.taxe.toFixed(2)} €</td></tr>
+            ` : `
+                <tr><td>Loyer Actuel</td><td>-${cfg.loyerActuel.toFixed(2)} €</td></tr>
+            `;
+
+            let colonnesInvestHtml = cfg.possedeImmo ? `
+                <td>-${cfg.pea.toFixed(2)} €</td><td>-${cfg.pea.toFixed(2)} €</td><td>-${cfg.pea.toFixed(2)} €</td><td>-${cfg.pea.toFixed(2)} €</td><td>-${cfg.pea.toFixed(2)} €</td>
+            ` : `
+                <td>-${cfg.pea.toFixed(2)} €</td>
+            `;
+
+            let colonnesPerHtml = cfg.possedeImmo ? `
+                <td>-${cfg.per.toFixed(2)} €</td><td>-${cfg.per.toFixed(2)} €</td><td>-${cfg.per.toFixed(2)} €</td><td>-${cfg.per.toFixed(2)} €</td><td>-${cfg.per.toFixed(2)} €</td>
+            ` : `
+                <td>-${cfg.per.toFixed(2)} €</td>
+            `;
+
+            let colonnesBitstackHtml = cfg.possedeImmo ? `
+                <td>-${cfg.bitstack.toFixed(2)} €</td><td>-${cfg.bitstack.toFixed(2)} €</td><td>-${cfg.bitstack.toFixed(2)} €</td><td>-${cfg.bitstack.toFixed(2)} €</td><td>-${cfg.bitstack.toFixed(2)} €</td>
+            ` : `
+                <td>-${cfg.bitstack.toFixed(2)} €</td>
+            `;
+
+            let colonnesLepHtml = cfg.possedeImmo ? `
+                <td>-${cfg.lep.toFixed(2)} €</td><td>-${cfg.lep.toFixed(2)} €</td><td>-${cfg.lep.toFixed(2)} €</td><td>-${cfg.lep.toFixed(2)} €</td><td>-${cfg.lep.toFixed(2)} €</td>
+            ` : `
+                <td>-${cfg.lep.toFixed(2)} €</td>
+            `;
+
+            let colonnesCoursesHtml = cfg.possedeImmo ? `
+                <td>-${cfg.courses.toFixed(2)} €</td><td>-${cfg.courses.toFixed(2)} €</td><td>-${cfg.courses.toFixed(2)} €</td><td>-${cfg.courses.toFixed(2)} €</td><td>-${cfg.courses.toFixed(2)} €</td>
+            ` : `
+                <td>-${cfg.courses.toFixed(2)} €</td>
+            `;
+
+            let colonnesLoisirsHtml = cfg.possedeImmo ? `
+                <td>-${cfg.loisirs.toFixed(2)} €</td><td>-${cfg.loisirs.toFixed(2)} €</td><td>-${cfg.loisirs.toFixed(2)} €</td><td>-${cfg.loisirs.toFixed(2)} €</td><td>-${cfg.loisirs.toFixed(2)} €</td>
+            ` : `
+                <td>-${cfg.loisirs.toFixed(2)} €</td>
+            `;
+
+            let totalLogColspan = cfg.possedeImmo ? '6' : '2';
+
+            let optionsSelectHtml = cfg.possedeImmo ? `
+                <option value="10" ${cfg.optionCibleOptimisation==='10'?'selected':''}>Option 10 Ans</option>
+                <option value="15" ${cfg.optionCibleOptimisation==='15'?'selected':''}>Option 15 Ans</option>
+                <option value="20" ${cfg.optionCibleOptimisation==='20'?'selected':''}>Option 20 Ans</option>
+                <option value="25" ${cfg.optionCibleOptimisation==='25'?'selected':''}>Option 25 Ans</option>
+                <option value="30" ${cfg.optionCibleOptimisation==='30'?'selected':''}>Option 30 Ans</option>
+            ` : `
+                <option value="20" selected>Mode Locataire Unique</option>
+            `;
+
+            let tableauFluxHtml = `
+                <div class="table-layout-container">
+                    <div>
+                        <table>
+                            <thead>
+                                <tr style="background:#334155; text-align:left;">
+                                    <th>Catégories de Flux Financiers</th>
+                                    ${entetesTableau}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><b>SALAIRE NET MENSUEL</b></td>
+                                    ${cfg.possedeImmo ? `
+                                        <td style="color:#4ade80">+${cfg.salaireNet.toFixed(2)} €</td>
+                                        <td style="color:#4ade80">+${cfg.salaireNet.toFixed(2)} €</td>
+                                        <td style="color:#4ade80">+${cfg.salaireNet.toFixed(2)} €</td>
+                                        <td style="color:#4ade80">+${cfg.salaireNet.toFixed(2)} €</td>
+                                        <td style="color:#4ade80">+${cfg.salaireNet.toFixed(2)} €</td>
+                                    ` : `
+                                        <td style="color:#4ade80">+${cfg.salaireNet.toFixed(2)} €</td>
+                                    `}
+                                </tr>
+                                
+                                <tr style="background:#1e293b;"><td colspan="${totalLogColspan}"><b>1. LOGEMENT & CHARGES FIXES</b></td></tr>
+                                ${cellulesLogement}
+                                <tr><td>Abonnement Internet</td>${cfg.possedeImmo ? `<td>-${cfg.internet.toFixed(2)} €</td><td>-${cfg.internet.toFixed(2)} €</td><td>-${cfg.internet.toFixed(2)} €</td><td>-${cfg.internet.toFixed(2)} €</td><td>-${cfg.internet.toFixed(2)} €</td>` : `<td>-${cfg.internet.toFixed(2)} €</td>`}</tr>
+                                <tr><td>Transport</td>${cfg.possedeImmo ? `<td>-${cfg.transport.toFixed(2)} €</td><td>-${cfg.transport.toFixed(2)} €</td><td>-${cfg.transport.toFixed(2)} €</td><td>-${cfg.transport.toFixed(2)} €</td><td>-${cfg.transport.toFixed(2)} €</td>` : `<td>-${cfg.transport.toFixed(2)} €</td>`}</tr>
+                                
+                                <tr style="color:#38bdf8; font-weight:bold; background:rgba(56,189,248,0.05);">
+                                    <td>TOTAL LOGEMENT</td>
+                                    ${cfg.possedeImmo ? `
+                                        <td>${totalLog10.toFixed(2)}€</td>
+                                        <td>${totalLog15.toFixed(2)}€</td>
+                                        <td>${totalLog20.toFixed(2)}€</td>
+                                        <td>${totalLog25.toFixed(2)}€</td>
+                                        <td>${totalLog30.toFixed(2)}€</td>
+                                    ` : `
+                                        <td>${totalLog20.toFixed(2)}€</td>
+                                    `}
+                                </tr>
+
+                                <tr style="background:#1e293b;"><td colspan="${totalLogColspan}"><b>2. PLACEMENTS FINANCIERS AUTOMATIQUES</b></td></tr>
+                                <tr><td>PEA</td>${colonnesInvestHtml}</tr>
+                                <tr><td>PER</td>${colonnesPerHtml}</tr>
+                                <tr><td>Bitstack</td>${colonnesBitstackHtml}</tr>
+                                <tr><td>LEP</td>${colonnesLepHtml}</tr>
+                                
+                                <tr style="color:#38bdf8; font-weight:bold; background:rgba(56,189,248,0.05);">
+                                    <td>TOTAL INVESTISSEMENTS</td>
+                                    <td colspan="${totalLogColspan}">${totalInvest.toFixed(2)}€</td>
+                                </tr>
+
+                                <tr style="background:#1e293b;"><td colspan="${totalLogColspan}"><b>3. VIE QUOTIDIENNE & PASSIONS</b></td></tr>
+                                <tr><td>Courses / Alimentation</td>${colonnesCoursesHtml}</tr>
+                                <tr><td>Loisirs / Sorties</td>${colonnesLoisirsHtml}</tr>
+                                ${abosHtml}
+                                
+                                <tr style="color:#38bdf8; font-weight:bold; background:rgba(56,189,248,0.05);">
+                                    <td>TOTAL VIE</td>
+                                    <td colspan="${totalLogColspan}">${totalVie.toFixed(2)}€</td>
+                                </tr>
+
+                                <tr style="border-top:3px solid #38bdf8;">
+                                    <td style="font-weight:bold; font-size:1.05em;">SOLDE RESTE À VIVRE NET</td>
+                                    ${cfg.possedeImmo ? `
+                                        <td style="${getResteStyle(reste10)}">${reste10>=0?'+':''}${reste10.toFixed(2)} €</td>
+                                        <td style="${getResteStyle(reste15)}">${reste15>=0?'+':''}${reste15.toFixed(2)} €</td>
+                                        <td style="${getResteStyle(reste20)}">${reste20>=0?'+':''}${reste20.toFixed(2)} €</td>
+                                        <td style="${getResteStyle(reste25)}">${reste25>=0?'+':''}${reste25.toFixed(2)} €</td>
+                                        <td style="${getResteStyle(reste30)}">${reste30>=0?'+':''}${reste30.toFixed(2)} €</td>
+                                    ` : `
+                                        <td style="${getResteStyle(reste20)}">${reste20>=0?'+':''}${reste20.toFixed(2)} €</td>
+                                    `}
+                                </tr>
+                                ${dernierMessageAlerte ? `
+                                <tr>
+                                    <td colspan="${totalLogColspan}" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; font-weight: bold; text-align: center; padding: 10px; border-top: 1px solid #38bdf8;">
+                                        ${dernierMessageAlerte}
+                                    </td>
+                                </tr>` : ''}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div style="background: linear-gradient(135deg, #450a0a, #7f1d1d); border: 3px solid #ef4444; border-radius: 10px; padding: 15px; text-align: center; box-shadow: 0 4px 20px rgba(239, 68, 68, 0.4);">
+                        <div style="font-weight: 900; color: #fca5a5; font-size: 14px; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">
+                            🎯 OBJECTIF FIN DE MOIS
+                        </div>
+                        
+                        <div style="margin-bottom: 10px;">
+                            <label style="font-size: 11px; color: #fecaca; display: block; margin-bottom: 3px; font-weight: bold;">Option ciblée :</label>
+                            <select id="sel-option-optimisation" onchange="synchroniserDonneesDynamiques()" style="background: #1e293b; border: 2px solid #f87171; color: #fff; padding: 6px; font-size: 13px; font-weight: bold; width: 100%; border-radius: 6px; outline: none; text-align: center;">
+                                ${optionsSelectHtml}
+                            </select>
+                        </div>
+
+                        <div style="margin-bottom: 10px;">
+                            <label style="font-size: 11px; color: #fecaca; display: block; margin-bottom: 3px; font-weight: bold;">Stratégie en cas de surplus :</label>
+                            <select id="sel-surplus-strategie" onchange="synchroniserDonneesDynamiques()" style="background: #1e293b; border: 2px solid #f87171; color: #fff; padding: 6px; font-size: 12px; font-weight: bold; width: 100%; border-radius: 6px; outline: none; text-align: center;">
+                                <option value="loisirs" ${cfg.surplusStrategie==='loisirs'?'selected':''}>Priorité Loisirs</option>
+                                <option value="investissement" ${cfg.surplusStrategie==='investissement'?'selected':''}>Priorité Investissement (PEA/PER)</option>
+                                <option value="5050" ${cfg.surplusStrategie==='5050'?'selected':''}>50 / 50 Loisirs & Investissement</option>
+                            </select>
+                        </div>
+
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 5px; margin-bottom: 12px;">
+                            <input type="number" id="inp-side-goal" value="${cfg.objectifResteAVivre}" oninput="synchroniserDonneesDynamiques()" style="background: #1e293b; border: 2px solid #f87171; color: #fff; padding: 8px; font-size: 16px; font-weight: bold; width: 90px; text-align: center; border-radius: 6px; outline: none;">
+                            <span style="font-weight: bold; color: #f87171; font-size: 15px;">balles</span>
+                        </div>
+                        <div style="font-size: 11px; color: #fecaca; margin-bottom: 12px; line-height: 1.3;">
+                            Cible l'option choisie avec l'ordre de priorité (Alim > Abos > Stratégie Surplus).
+                        </div>
+                        <button type="button" onclick="spamOptimization()" style="background: #ef4444; color: white; border: none; width: 100%; padding: 14px 10px; border-radius: 6px; font-size: 14px; font-weight: 900; cursor: pointer; text-transform: uppercase; box-shadow: 0 4px 10px rgba(0,0,0,0.4); transition: transform 0.1s; letter-spacing: 0.5px; margin-bottom: 8px;">
+                            🔥 SPAM THIS BUTTON TO OPTIMIZE 🔥
+                        </button>
+                        <button type="button" onclick="restaurerDernierEnregistrement()" style="background: #334155; color: #f8fafc; border: 1px solid #94a3b8; width: 100%; padding: 8px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer;">
+                            🔄 Reset avant optimisation (Dernier "Mettre à jour")
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            if (modeActuel === 'proprietaire') {
+                content.innerHTML = formHtml + tableauFluxHtml;
+            } else if (modeActuel === 'projet') {
+                content.innerHTML = projetHtml;
+            } else if (modeActuel === 'ia') {
+                content.innerHTML = sectionIAHtml + tableauFluxHtml;
+            }
+        }
+
+        faireSnapshotFormulaire();
+        render();
+    </script>
+</body>
+</html>
