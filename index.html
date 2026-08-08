@@ -50,6 +50,10 @@
                 <h1 id="titre-mode" style="margin:0; font-size:1.3rem; color:#f8fafc; text-transform:uppercase;">Ressources & Dépenses Mensuelles</h1>
                 <span style="font-size:11px; color:#94a3b8;">Gérez vos flux financiers et simulez vos projets d'avenir</span>
             </div>
+            <div style="display:flex; gap:8px; align-items:center;">
+                <button type="button" onclick="sauvegarderProfilNavigateur()" style="background:#10b981; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:bold;">💾 Sauvegarder Profil</button>
+                <button type="button" onclick="chargerProfilNavigateur()" style="background:#0284c7; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:bold;">📂 Charger Profil</button>
+            </div>
         </div>
 
         <div style="display:flex; justify-content:flex-end; align-items:center; margin-bottom: 15px;">
@@ -126,6 +130,40 @@
         ];
 
         let snapshotDernierEnregistrement = null;
+
+        function sauvegarderProfilNavigateur() {
+            synchroniserDonneesDynamiques();
+            const profilData = {
+                cfg,
+                abonnementsVie,
+                comptesDispo,
+                placementsBloques,
+                patrimoineSupplementaire
+            };
+            localStorage.setItem('appBankRpgProfil', JSON.stringify(profilData));
+            alert("💾 Profil sauvegardé avec succès dans votre navigateur !");
+        }
+
+        function chargerProfilNavigateur() {
+            const savedData = localStorage.getItem('appBankRpgProfil');
+            if (!savedData) {
+                alert("⚠️ Aucun profil sauvegardé trouvé dans le navigateur.");
+                return;
+            }
+            try {
+                const profilData = JSON.parse(savedData);
+                cfg = profilData.cfg;
+                abonnementsVie = profilData.abonnementsVie;
+                comptesDispo = profilData.comptesDispo;
+                placementsBloques = profilData.placementsBloques;
+                patrimoineSupplementaire = profilData.patrimoineSupplementaire;
+                faireSnapshotFormulaire();
+                render();
+                alert("📂 Profil chargé avec succès !");
+            } catch(e) {
+                alert("❌ Erreur lors du chargement du profil.");
+            }
+        }
 
         function faireSnapshotFormulaire() {
             synchroniserDonneesDynamiques();
@@ -710,7 +748,6 @@
                 
                 let graphiquePointsInvest = [];
                 let graphiquePointsVerse = []; 
-                let versementMensuelTotalGlobal = totalInvest + comptesDispo.reduce((acc,c)=>acc+(c.versementMensuel||0),0) + placementsBloques.reduce((acc,p)=>acc+(p.versementMensuel||0),0);
 
                 let tousPlacements = [...placementsBloques, ...comptesDispo];
                 
@@ -739,16 +776,18 @@
 
                 jalonsAnnees.forEach((an, idx) => {
                     let sommeGlobalAn = 0;
+                    let sommeVerseGlobalAn = 0;
                     tousPlacements.forEach(p => {
                         let s = p.solde;
                         if (p.nom === cfg.depenseFuturCompteCible) s = Math.max(0, s - cfg.depenseFuturMontant);
                         sommeGlobalAn += calculerFuturCompte(s, p.versementMensuel || 0, p.virementExterne || 0, p.rendement, an);
+                        sommeVerseGlobalAn += s + ((p.versementMensuel || 0) + (p.virementExterne || 0)) * an * 12;
                     });
                     sommeGlobalAn += totalPatrimoineSupp;
+                    sommeVerseGlobalAn += totalPatrimoineSupp;
+                    
                     graphiquePointsInvest.push(sommeGlobalAn);
-
-                    let totalVerseCumule = (totalDispo + totalBloque) + (versementMensuelTotalGlobal * an * 12) + totalPatrimoineSupp;
-                    graphiquePointsVerse.push(totalVerseCumule);
+                    graphiquePointsVerse.push(sommeVerseGlobalAn);
                 });
 
                 let epargneDispoActuelle = 0;
@@ -836,11 +875,6 @@
                 let hauteurGraphPx = svgHeight - 80;
                 let yBase = svgHeight - 40;
                 
-                // Fonction d'échelle personnalisée pour coller exactement à la maquette :
-                // 0€ -> Bas (yBase)
-                // 10k€ -> 10% de la hauteur
-                // 100k€ -> Mi-hauteur (50%)
-                // 1M€ -> Tout en haut (100%)
                 let echelleY = (val) => {
                     if (val <= 0) return yBase;
                     let v = Math.min(Math.max(val, 0), 1000000);
@@ -877,7 +911,6 @@
                     let yTotal = echelleY(valTotal);
                     let yVerse = echelleY(valVerse);
 
-                    let hauteurTotalePx = yBase - yTotal;
                     let hauteurVersePx = yBase - yVerse;
                     let hauteurBeneficePx = Math.max(0, yVerse - yTotal);
 
