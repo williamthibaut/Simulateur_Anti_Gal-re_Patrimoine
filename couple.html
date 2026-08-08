@@ -951,6 +951,47 @@
                 blocksProjetP1Html = genererBlocsPlacements(placementsP1, false);
                 blocksProjetP2Html = genererBlocsPlacements(placementsP2, true);
 
+                // Fonction de projection individuelle pour les jalons [2, 5, 10, 20, 30, 50] ans incluant la part de la maison (/2)
+                const calculerProjectionIndividuellePartenaire = (listePlacementsIndiv, patSuppIndiv, immoPartIndiv) => {
+                    let jalonsProjo = [2, 5, 10, 20, 30, 50];
+                    return jalonsProjo.map(an => {
+                        let totalPlacementsAn = 0;
+                        listePlacementsIndiv.forEach(p => {
+                            let s = p.solde;
+                            if (p.nom === cfg.depenseFuturCompteCible && p.proprietaire === 'P1') {
+                                s = Math.max(0, s - cfg.depenseFuturMontant);
+                            }
+                            totalPlacementsAn += calculerFuturCompte(s, p.versementMensuel || 0, p.virementExterne || 0, p.rendement, an);
+                        });
+                        // Ajout part commune répartie pour moitié
+                        placementsCommun.forEach(p => {
+                            totalPlacementsAn += calculerFuturCompte(p.solde, (p.versementMensuel||0)/2, (p.virementExterne||0)/2, p.rendement, an);
+                        });
+                        
+                        let valeurImmoAn = immoPartIndiv;
+                        if (cfg.possedeImmo && immoPartIndiv > 0) {
+                            let rM = cfg.taeg / 100 / 12;
+                            let moisEcoules = an * 12;
+                            let capitalRembourseAn = 0;
+                            let capRestant = capitalEmprunte;
+                            for(let mIdx = 0; mIdx < moisEcoules; mIdx++) {
+                                let interetsMois = capRestant * rM;
+                                let partAmortissement = m20 - interetsMois;
+                                capitalRembourseAn += partAmortissement;
+                                capRestant -= partAmortissement;
+                            }
+                            capitalRembourseAn = Math.min(capitalEmprunte, Math.max(0, capitalRembourseAn));
+                            let valeurBienEstimee = cfg.prixAnnonce * Math.pow(1.015, an);
+                            let capitalRestantDu = Math.max(0, capitalEmprunte - capitalRembourseAn);
+                            valeurImmoAn = Math.max(0, (valeurBienEstimee - capitalRestantDu - (valeurBienEstimee * 0.05)) / 2);
+                        }
+                        return { annee: an, montant: totalPlacementsAn + patSuppIndiv + ((patSuppCommun)/2) + valeurImmoAn };
+                    });
+                };
+
+                let projoP1 = calculerProjectionIndividuellePartenaire(placementsP1, patSuppP1, immoP1);
+                let projoP2 = calculerProjectionIndividuellePartenaire(placementsP2, totalPatrimoineSuppP2, immoP2);
+
                 jalonsAnnees.forEach((an, idx) => {
                     let sommeGlobalAn = 0;
                     tousPlacements.forEach(p => {
@@ -1089,12 +1130,12 @@
                             </div>
                             <div style="background:#18080a; padding:15px; border-radius:6px; border:2px solid #f87171; text-align:center;">
                                 <div style="font-size:12px; color:#fca5a5; text-transform:uppercase; font-weight:bold;">Patrimoine Partenaire 1 (P1)</div>
-                                <div style="font-size: 26px; font-weight: 900; color: #f87171; margin: 8px 0;">${patrimoineTotalP1.toFixed(2)} €</div>
+                                <div style="font-size: 26px; font-weight: 900; color: #4ade80; margin: 8px 0;">${patrimoineTotalP1.toFixed(2)} €</div>
                                 <div style="font-size: 11px; color: #cbd5e1;">Dispo: ${dispoP1.toFixed(0)}€ | Bloqué: ${bloqueP1.toFixed(0)}€ | Supp P1: ${patSuppP1.toFixed(0)}€ | Immo Part: ${immoP1.toFixed(0)}€</div>
                             </div>
                             <div style="background:#18080a; padding:15px; border-radius:6px; border:2px solid #f87171; text-align:center;">
                                 <div style="font-size:12px; color:#fca5a5; text-transform:uppercase; font-weight:bold;">Patrimoine Partenaire 2 (P2)</div>
-                                <div style="font-size: 26px; font-weight: 900; color: #f87171; margin: 8px 0;">${patrimoineTotalP2.toFixed(2)} €</div>
+                                <div style="font-size: 26px; font-weight: 900; color: #4ade80; margin: 8px 0;">${patrimoineTotalP2.toFixed(2)} €</div>
                                 <div style="font-size: 11px; color: #cbd5e1;">Dispo: ${dispoP2.toFixed(0)}€ | Bloqué: ${bloqueP2.toFixed(0)}€ | Supp P2: ${patSuppP2.toFixed(0)}€ | Immo Part: ${immoP2.toFixed(0)}€</div>
                             </div>
                         </div>
@@ -1209,9 +1250,13 @@
                     <div class="card" style="border: 2px solid #f87171; background: #18080a; padding: 20px; border-radius: 8px;">
                         <h3 style="margin-top: 0; color: #f87171; text-transform: uppercase;">📊 Estimations & Projections - Partenaire 1 (P1)</h3>
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 25px;">
-                            <div style="background:#1e293b; padding:15px; border-radius:6px; border-left: 4px solid #f87171;">
+                            <div style="background:#1e293b; padding:15px; border-radius:6px; border-left: 4px solid #4ade80;">
                                 <div style="font-size:11px; color:#94a3b8; text-transform: uppercase; font-weight: bold;">Patrimoine P1 Actuel</div>
-                                <div style="font-size:20px; font-weight:bold; color:#f87171; margin-top:5px;">${patrimoineTotalP1.toFixed(2)} €</div>
+                                <div style="font-size:20px; font-weight:bold; color:#4ade80; margin-top:5px;">${patrimoineTotalP1.toFixed(2)} €</div>
+                                <div style="font-size:11px; color:#64748b; margin-top:8px; line-height:1.4;">
+                                    <b>Projections (Immo /2 + Placements) :</b><br>
+                                    ${projoP1.map(pj => `<b>${pj.annee} ans</b>: <span style="color:#94a3b8;">${pj.montant.toFixed(0)}€</span>`).join(' | ')}
+                                </div>
                             </div>
                         </div>
                         <div style="margin-top: 15px;">
@@ -1219,13 +1264,17 @@
                         </div>
                     </div>
 
-                    <!-- SECTION PATRIMOINE INDIVIDUEL P2 (Zone Rouge Modèle Ressource) -->
+                    <!-- SECTION PATRIMOINE INDIVIDUEL P2 -->
                     <div class="card" style="border: 2px solid #f87171; background: #18080a; padding: 20px; border-radius: 8px;">
                         <h3 style="margin-top: 0; color: #f87171; text-transform: uppercase;">📊 Estimations & Projections - Partenaire 2 (P2)</h3>
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 25px;">
-                            <div style="background:#1e293b; padding:15px; border-radius:6px; border-left: 4px solid #f87171;">
+                            <div style="background:#1e293b; padding:15px; border-radius:6px; border-left: 4px solid #4ade80;">
                                 <div style="font-size:11px; color:#94a3b8; text-transform: uppercase; font-weight: bold;">Patrimoine P2 Actuel</div>
-                                <div style="font-size:20px; font-weight:bold; color:#f87171; margin-top:5px;">${patrimoineTotalP2.toFixed(2)} €</div>
+                                <div style="font-size:20px; font-weight:bold; color:#4ade80; margin-top:5px;">${patrimoineTotalP2.toFixed(2)} €</div>
+                                <div style="font-size:11px; color:#64748b; margin-top:8px; line-height:1.4;">
+                                    <b>Projections (Immo /2 + Placements) :</b><br>
+                                    ${projoP2.map(pj => `<b>${pj.annee} ans</b>: <span style="color:#94a3b8;">${pj.montant.toFixed(0)}€</span>`).join(' | ')}
+                                </div>
                             </div>
                         </div>
                         <div style="margin-top: 15px;">
