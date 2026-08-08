@@ -141,7 +141,6 @@
             per: 50,
             bitstack: 52,
             lep: 300,
-            // Nouveaux champs pour P1 et P2
             peaP2: 50,
             perP2: 0,
             bitstackP2: 0,
@@ -166,21 +165,22 @@
         ];
 
         let comptesDispo = [
-            { nom: 'Compte Courant Boursorama', solde: 200, rendement: 0, versementMensuel: 0, virementExterne: 0 },
-            { nom: 'Livret A', solde: 1, rendement: 1.7, versementMensuel: 0, virementExterne: 0 },
-            { nom: 'LEP (Matelas Sécurité)', solde: 1550, rendement: 2.5, versementMensuel: 100, virementExterne: 0 }
+            { nom: 'Compte Courant Boursorama', solde: 200, rendement: 0, versementMensuel: 0, virementExterne: 0, proprietaire: 'P1' },
+            { nom: 'Livret A', solde: 1, rendement: 1.7, versementMensuel: 0, virementExterne: 0, proprietaire: 'Commun' },
+            { nom: 'LEP (Matelas Sécurité)', solde: 1550, rendement: 2.5, versementMensuel: 100, virementExterne: 0, proprietaire: 'P1' }
         ];
 
         let placementsBloques = [
-            { nom: 'PEA (Actions Mondiales / ETF)', solde: 2150, rendement: 7.5, versementMensuel: 100, virementExterne: 0 },
-            { nom: 'PER (Plan Épargne Retraite)', solde: 1700, rendement: 5.0, versementMensuel: 50, virementExterne: 0 },
-            { nom: 'Bitstack / Bitcoin', solde: 595, rendement: 10.0, versementMensuel: 20, virementExterne: 0 },
-            { nom: 'PEL (Plan Épargne Logement)', solde: 2880, rendement: 1.6, versementMensuel: 0, virementExterne: 50 }
+            { nom: 'PEA (Actions Mondiales / ETF)', solde: 2150, rendement: 7.5, versementMensuel: 100, virementExterne: 0, proprietaire: 'P1' },
+            { nom: 'PER (Plan Épargne Retraite)', solde: 1700, rendement: 5.0, versementMensuel: 50, virementExterne: 0, proprietaire: 'P1' },
+            { nom: 'Bitstack / Bitcoin', solde: 595, rendement: 10.0, versementMensuel: 20, virementExterne: 0, proprietaire: 'P1' },
+            { nom: 'PEL (Plan Épargne Logement)', solde: 2880, rendement: 1.6, versementMensuel: 0, virementExterne: 50, proprietaire: 'Commun' },
+            { nom: 'PEA Partenaire 2', solde: 1000, rendement: 7.0, versementMensuel: 50, virementExterne: 0, proprietaire: 'P2' }
         ];
 
         let patrimoineSupplementaire = [
-            { nom: 'Carte / Objets de collection', valeur: 700 },
-            { nom: 'Quiver de Kitesurf (Ail harnais barre pompe -2023-2024)', valeur: 1000 }
+            { nom: 'Carte / Objets de collection', valeur: 700, proprietaire: 'Commun' },
+            { nom: 'Quiver de Kitesurf (Ail harnais barre pompe -2023-2024)', valeur: 1000, proprietaire: 'P1' }
         ];
 
         let snapshotDernierEnregistrement = null;
@@ -216,7 +216,7 @@
 
         function ajouterLignePatrimoineSupp() {
             synchroniserDonneesDynamiques();
-            patrimoineSupplementaire.push({ nom: 'Nouvel Actif', valeur: 0 });
+            patrimoineSupplementaire.push({ nom: 'Nouvel Actif', valeur: 0, proprietaire: 'Commun' });
             render();
         }
 
@@ -264,7 +264,7 @@
         }
 
         function ajouterCompteDispo() {
-            comptesDispo.push({ nom: 'Nouveau Compte', solde: 0, rendement: 0, versementMensuel: 0, virementExterne: 0 });
+            comptesDispo.push({ nom: 'Nouveau Compte', solde: 0, rendement: 0, versementMensuel: 0, virementExterne: 0, proprietaire: 'Commun' });
             render();
         }
 
@@ -274,7 +274,7 @@
         }
 
         function ajouterPlacementBloque() {
-            placementsBloques.push({ nom: 'Nouveau Placement', solde: 0, rendement: 5.0, versementMensuel: 0, virementExterne: 0 });
+            placementsBloques.push({ nom: 'Nouveau Placement', solde: 0, rendement: 5.0, versementMensuel: 0, virementExterne: 0, proprietaire: 'Commun' });
             render();
         }
 
@@ -318,6 +318,10 @@
                         comptesDispo[i].virementExterne = parseFloat(inpExt.value) || 0;
                     }
                     comptesDispo[i].rendement = parseFloat(row.querySelector('.inp-rendement').value) || 0;
+                    const selProp = row.querySelector('.inp-prop');
+                    if (selProp) {
+                        comptesDispo[i].proprietaire = selProp.value;
+                    }
                 }
             });
 
@@ -330,15 +334,21 @@
                     if (inpV) {
                         placementsBloques[i].versementMensuel = parseFloat(inpV.value) || 0;
                         let nomP = placementsBloques[i].nom.toUpperCase();
-                        if(nomP.includes('PEA')) cfg.pea = placementsBloques[i].versementMensuel;
-                        if(nomP.includes('PER')) cfg.per = placementsBloques[i].versementMensuel;
-                        if(nomP.includes('BITSTACK') || nomP.includes('BITCOIN')) cfg.bitstack = placementsBloques[i].versementMensuel;
+                        if(nomP.includes('PEA') && placementsBloques[i].proprietaire === 'P1') cfg.pea = placementsBloques[i].versementMensuel;
+                        if(nomP.includes('PER') && placementsBloques[i].proprietaire === 'P1') cfg.per = placementsBloques[i].versementMensuel;
+                        if((nomP.includes('BITSTACK') || nomP.includes('BITCOIN')) && placementsBloques[i].proprietaire === 'P1') cfg.bitstack = placementsBloques[i].versementMensuel;
+                        if(nomP.includes('PEA') && placementsBloques[i].proprietaire === 'P2') cfg.peaP2 = placementsBloques[i].versementMensuel;
+                        if(nomP.includes('PER') && placementsBloques[i].proprietaire === 'P2') cfg.perP2 = placementsBloques[i].versementMensuel;
                     }
                     const inpExt = row.querySelector('.inp-virement-externe');
                     if (inpExt) {
                         placementsBloques[i].virementExterne = parseFloat(inpExt.value) || 0;
                     }
                     placementsBloques[i].rendement = parseFloat(row.querySelector('.inp-rendement').value) || 0;
+                    const selProp = row.querySelector('.inp-prop');
+                    if (selProp) {
+                        placementsBloques[i].proprietaire = selProp.value;
+                    }
                 }
             });
 
@@ -347,6 +357,10 @@
                 if (patrimoineSupplementaire[i]) {
                     patrimoineSupplementaire[i].nom = row.querySelector('.inp-patsupp-nom').value;
                     patrimoineSupplementaire[i].valeur = parseFloat(row.querySelector('.inp-patsupp-val').value) || 0;
+                    const selProp = row.querySelector('.inp-prop');
+                    if (selProp) {
+                        patrimoineSupplementaire[i].proprietaire = selProp.value;
+                    }
                 }
             });
 
@@ -577,6 +591,13 @@
                 tablePatSuppHtml += `<tr class="row-patsupp">
                     <td><input type="text" value="${item.nom}" class="inp-patsupp-nom" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:100%;"></td>
                     <td><input type="number" step="any" value="${item.valeur}" class="inp-patsupp-val" oninput="patrimoineSupplementaire[${index}].valeur = parseFloat(this.value) || 0;" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:100%;"></td>
+                    <td>
+                        <select class="inp-prop" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:100%;">
+                            <option value="Commun" ${item.proprietaire==='Commun'?'selected':''}>Commun</option>
+                            <option value="P1" ${item.proprietaire==='P1'?'selected':''}>P1</option>
+                            <option value="P2" ${item.proprietaire==='P2'?'selected':''}>P2</option>
+                        </select>
+                    </td>
                     <td><button type="button" class="del-btn" onclick="supprimerLignePatrimoineSupp(${index})">Supprimer</button></td>
                 </tr>`;
             });
@@ -592,17 +613,22 @@
                 </div>
                 <form onsubmit="sauvegarderFormulaire(event)">
                     <div class="form-section-card">
-                        <div class="form-section-title">💶 1. Salaires & Revenus Mensuels (Couple)</div>
+                        <div class="form-section-title">💶 1. Salaires & Revenus Mensuels (Couple) P1</div>
                         <div class="form-grid-inner">
                             <div class="form-group"><label>Salaire Brut (€)</label>${makeInput('salaireBrut', cfg.salaireBrut)}</div>
                             <div class="form-group"><label>Prime d'ancienneté (€)</label>${makeInput('primeAnciennete', cfg.primeAnciennete)}</div>
                             <div class="form-group"><label>Prélèvement à la source (%)</label>${makeInput('tauxPas', cfg.tauxPas)}</div>
-                            <div class="form-group"><label>Salaire Net Réel (Calculé)</label><div class="input-wrapper"><input type="number" step="any" name="salaireNet" value="${cfg.salaireNet.toFixed(2)}" readonly style="color:#4ade80;"></div></div>
-                            
+                            <div class="form-group"><label>Salaire Net Réel P1 (Calculé)</label><div class="input-wrapper"><input type="number" step="any" name="salaireNet" value="${cfg.salaireNet.toFixed(2)}" readonly style="color:#4ade80;"></div></div>
+                        </div>
+                    </div>
+
+                    <div class="form-section-card partenaire2-card">
+                        <div class="form-section-title">💶 1. Salaires & Revenus Mensuels (Couple) P2</div>
+                        <div class="form-grid-inner">
                             <div class="form-group"><label>Salaire Brut Conjoint (€)</label>${makeInput('salaireBrutConjoint', cfg.salaireBrutConjoint)}</div>
                             <div class="form-group"><label>Prime d'ancienneté Conjoint (€)</label>${makeInput('primeAncienneteConjoint', cfg.primeAncienneteConjoint)}</div>
                             <div class="form-group"><label>Prélèvement à la source Conjoint (%)</label>${makeInput('tauxPasConjoint', cfg.tauxPasConjoint)}</div>
-                            <div class="form-group"><label>Salaire Net Conjoint (Calculé)</label><div class="input-wrapper"><input type="number" step="any" name="salaireNetConjoint" value="${cfg.salaireNetConjoint.toFixed(2)}" readonly style="color:#4ade80;"></div></div>
+                            <div class="form-group"><label>Salaire Net P2 (Calculé)</label><div class="input-wrapper"><input type="number" step="any" name="salaireNetConjoint" value="${cfg.salaireNetConjoint.toFixed(2)}" readonly style="color:#4ade80;"></div></div>
                         </div>
                     </div>
 
@@ -691,7 +717,7 @@
                             <button type="button" class="action-btn" onclick="ajouterLignePatrimoineSupp()" style="margin:0; padding:4px 8px; font-size:11px;">+ Ajouter un actif</button>
                         </div>
                         <table id="table-patsupp" style="margin:0;">
-                            <tr><th>Nom / Description</th><th>Valeur (€)</th><th>Action</th></tr>
+                            <tr><th>Nom / Description</th><th>Valeur (€)</th><th>Propriétaire</th><th>Action</th></tr>
                             ${tablePatSuppHtml}
                         </table>
                     </div>
@@ -783,6 +809,25 @@
                 let totalPatrimoineSupp = patrimoineSupplementaire.reduce((acc, item) => acc + item.valeur, 0);
                 let patrimoineTotalInstantT = estimationReventeInstantT + totalDispo + totalBloque + totalPatrimoineSupp;
 
+                // Calculs Individuels Partenaire 1 (P1)
+                let dispoP1 = comptesDispo.filter(c => c.proprietaire === 'P1').reduce((acc, c) => acc + c.solde, 0);
+                let bloqueP1 = placementsBloques.filter(p => p.proprietaire === 'P1').reduce((acc, p) => acc + p.solde, 0);
+                let patSuppP1 = patrimoineSupplementaire.filter(ps => ps.proprietaire === 'P1').reduce((acc, item) => acc + item.valeur, 0);
+                let immoP1 = cfg.possedeImmo ? (estimationReventeInstantT / 2) : 0;
+                let patrimoineTotalP1 = dispoP1 + bloqueP1 + patSuppP1 + immoP1;
+
+                // Calculs Individuels Partenaire 2 (P2)
+                let dispoP2 = comptesDispo.filter(c => c.proprietaire === 'P2').reduce((acc, c) => acc + c.solde, 0);
+                let bloqueP2 = placementsBloques.filter(p => p.proprietaire === 'P2').reduce((acc, p) => acc + p.solde, 0);
+                let patSuppP2 = patrimoineSupplementaire.filter(ps => ps.proprietaire === 'P2').reduce((acc, item) => acc + item.valeur, 0);
+                let immoP2 = cfg.possedeImmo ? (estimationReventeInstantT / 2) : 0;
+                let patrimoineTotalP2 = dispoP2 + bloqueP2 + patSuppP2 + immoP2;
+
+                // Part commune partagée en 50/50 pour les individus si besoin, ou affichée à part
+                let dispoCommun = comptesDispo.filter(c => c.proprietaire === 'Commun').reduce((acc, c) => acc + c.solde, 0);
+                let bloqueCommun = placementsBloques.filter(p => p.proprietaire === 'Commun').reduce((acc, p) => acc + p.solde, 0);
+                let patSuppCommun = patrimoineSupplementaire.filter(ps => ps.proprietaire === 'Commun').reduce((acc, item) => acc + item.valeur, 0);
+
                 const calculerFuturCompte = (soldeActuel, versementPerso, versementExterne, tauxAnnuel, annees) => {
                     let r = tauxAnnuel / 100 / 12;
                     let n = annees * 12;
@@ -796,35 +841,49 @@
 
                 let jalonsAnnees = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60];
                 let blocksProjetHtml = '';
+                let blocksProjetP1Html = '';
+                let blocksProjetP2Html = '';
                 
                 let graphiquePointsInvest = [];
+                let graphiquePointsInvestP1 = [];
+                let graphiquePointsInvestP2 = [];
                 let graphiquePointsCible = [];
                 let valeurInitialeTotale = totalDispo + totalBloque + totalPatrimoineSupp;
+                let valeurInitialeP1 = dispoP1 + bloqueP1 + patSuppP1;
+                let valeurInitialeP2 = dispoP2 + bloqueP2 + patSuppP2;
 
                 let tousPlacements = [...placementsBloques, ...comptesDispo];
+                let placementsP1 = tousPlacements.filter(p => p.proprietaire === 'P1');
+                let placementsP2 = tousPlacements.filter(p => p.proprietaire === 'P2');
+                let placementsCommun = tousPlacements.filter(p => p.proprietaire === 'Commun');
                 
-                blocksProjetHtml += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; margin-top: 10px;">';
-                tousPlacements.forEach((p, idx) => {
-                    let soldePrisEnCompte = p.solde;
-                    if (p.nom === cfg.depenseFuturCompteCible) {
-                        soldePrisEnCompte = Math.max(0, p.solde - cfg.depenseFuturMontant);
-                    }
-                    
-                    let resultatsJalons = jalonsAnnees.map(an => calculerFuturCompte(soldePrisEnCompte, p.versementMensuel || 0, p.virementExterne || 0, p.rendement, an));
-                    
-                    blocksProjetHtml += `
-                        <div style="background:#0f172a; border:1px solid #334155; padding:12px; border-radius:6px; display: flex; flex-direction: column; justify-content: space-between;">
-                            <div>
-                                <div style="font-weight:bold; color:#38bdf8; font-size:13px; margin-bottom: 6px;">${p.nom}</div>
-                                <div style="font-size:11px; color:#94a3b8; margin-bottom: 8px;">Actuel: ${soldePrisEnCompte.toFixed(2)}€ | Vers: +${(p.versementMensuel||0).toFixed(2)}€/m | Ext: +${(p.virementExterne||0).toFixed(2)}€/m | Rend: ${p.rendement}%</div>
+                const genererBlocsPlacements = (listePlacements) => {
+                    let html = '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; margin-top: 10px;">';
+                    listePlacements.forEach((p) => {
+                        let soldePrisEnCompte = p.solde;
+                        if (p.nom === cfg.depenseFuturCompteCible) {
+                            soldePrisEnCompte = Math.max(0, p.solde - cfg.depenseFuturMontant);
+                        }
+                        let resultatsJalons = jalonsAnnees.map(an => calculerFuturCompte(soldePrisEnCompte, p.versementMensuel || 0, p.virementExterne || 0, p.rendement, an));
+                        html += `
+                            <div style="background:#0f172a; border:1px solid #334155; padding:12px; border-radius:6px; display: flex; flex-direction: column; justify-content: space-between;">
+                                <div>
+                                    <div style="font-weight:bold; color:#38bdf8; font-size:13px; margin-bottom: 6px;">${p.nom} <span style="font-size:10px; background:#334155; padding:2px 6px; border-radius:4px; color:#cbd5e1;">${p.proprietaire}</span></div>
+                                    <div style="font-size:11px; color:#94a3b8; margin-bottom: 8px;">Actuel: ${soldePrisEnCompte.toFixed(2)}€ | Vers: +${(p.versementMensuel||0).toFixed(2)}€/m | Ext: +${(p.virementExterne||0).toFixed(2)}€/m | Rend: ${p.rendement}%</div>
+                                </div>
+                                <div style="font-size:11px; color:#cbd5e1; border-top: 1px solid #334155; padding-top: 6px; display: flex; flex-wrap: wrap; gap: 6px;">
+                                    ${jalonsAnnees.map((an, iId) => `<span><b>${an === 1 ? 'An 1' : `${an} ans`}</b> : <b style="color:#4ade80;">${resultatsJalons[iId].toFixed(0)}€</b></span>`).join(' | ')}
+                                </div>
                             </div>
-                            <div style="font-size:11px; color:#cbd5e1; border-top: 1px solid #334155; padding-top: 6px; display: flex; flex-wrap: wrap; gap: 6px;">
-                                ${jalonsAnnees.map((an, iId) => `<span><b>${an === 1 ? 'An 1' : `${an} ans`}</b> : <b style="color:#4ade80;">${resultatsJalons[iId].toFixed(0)}€</b></span>`).join(' | ')}
-                            </div>
-                        </div>
-                    `;
-                });
-                blocksProjetHtml += '</div>';
+                        `;
+                    });
+                    html += '</div>';
+                    return html;
+                };
+
+                blocksProjetHtml = genererBlocsPlacements(tousPlacements);
+                blocksProjetP1Html = genererBlocsPlacements(placementsP1);
+                blocksProjetP2Html = genererBlocsPlacements(placementsP2);
 
                 jalonsAnnees.forEach((an, idx) => {
                     let sommeGlobalAn = 0;
@@ -836,6 +895,24 @@
                     sommeGlobalAn += totalPatrimoineSupp;
                     graphiquePointsInvest.push(sommeGlobalAn);
                     graphiquePointsCible.push(valeurInitialeTotale * Math.pow(1.05, an) + (an * 5000));
+
+                    let sommeP1An = 0;
+                    placementsP1.forEach(p => {
+                        let s = p.solde;
+                        if (p.nom === cfg.depenseFuturCompteCible) s = Math.max(0, s - cfg.depenseFuturMontant);
+                        sommeP1An += calculerFuturCompte(s, p.versementMensuel || 0, p.virementExterne || 0, p.rendement, an);
+                    });
+                    sommeP1An += patSuppP1;
+                    graphiquePointsInvestP1.push(sommeP1An);
+
+                    let sommeP2An = 0;
+                    placementsP2.forEach(p => {
+                        let s = p.solde;
+                        if (p.nom === cfg.depenseFuturCompteCible) s = Math.max(0, s - cfg.depenseFuturMontant);
+                        sommeP2An += calculerFuturCompte(s, p.versementMensuel || 0, p.virementExterne || 0, p.rendement, an);
+                    });
+                    sommeP2An += patSuppP2;
+                    graphiquePointsInvestP2.push(sommeP2An);
                 });
 
                 let epargneDispoActuelle = 0;
@@ -903,6 +980,13 @@
                         <td><input type="number" step="any" value="${c.versementMensuel || 0}" class="inp-versement" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:100%;"></td>
                         <td><input type="number" step="any" value="${c.virementExterne || 0}" class="inp-virement-externe" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:100%;"></td>
                         <td><input type="number" step="any" value="${c.rendement}" class="inp-rendement" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:60px;"> %</td>
+                        <td>
+                            <select class="inp-prop" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:100%;">
+                                <option value="Commun" ${c.proprietaire==='Commun'?'selected':''}>Commun</option>
+                                <option value="P1" ${c.proprietaire==='P1'?'selected':''}>P1</option>
+                                <option value="P2" ${c.proprietaire==='P2'?'selected':''}>P2</option>
+                            </select>
+                        </td>
                         <td><button type="button" class="del-btn" onclick="supprimerCompteDispo(${index})">Supprimer</button></td>
                     </tr>`;
                 });
@@ -915,6 +999,13 @@
                         <td><input type="number" step="any" value="${p.versementMensuel}" class="inp-versement" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:100%;"></td>
                         <td><input type="number" step="any" value="${p.virementExterne || 0}" class="inp-virement-externe" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:100%;"></td>
                         <td><input type="number" step="any" value="${p.rendement}" class="inp-rendement" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:60px;"> %</td>
+                        <td>
+                            <select class="inp-prop" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:100%;">
+                                <option value="Commun" ${p.proprietaire==='Commun'?'selected':''}>Commun</option>
+                                <option value="P1" ${p.proprietaire==='P1'?'selected':''}>P1</option>
+                                <option value="P2" ${p.proprietaire==='P2'?'selected':''}>P2</option>
+                            </select>
+                        </td>
                         <td><button type="button" class="del-btn" onclick="supprimerPlacementBloque(${index})">Supprimer</button></td>
                     </tr>`;
                 });
@@ -938,22 +1029,28 @@
 
                 projetHtml = `
                     <div class="card" style="border: 2px solid #38bdf8; background: linear-gradient(135deg, #0f172a, #1e293b); box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);">
-                        <h2 style="margin-top:0; color:#38bdf8; text-transform:uppercase; text-align:center; font-size: 1.2rem;">ESTIMATION PATRIMOINE TOTALE (Aujourd'hui - ${dateDuJourStr})</h2>
-                        <div style="font-size: 28px; font-weight: 900; color: #4ade80; text-align: center; margin: 10px 0;">
-                            ${patrimoineTotalInstantT.toFixed(2)} €
-                        </div>
-                        <div style="font-size: 12px; color: #94a3b8; text-align: center; margin-bottom: 15px;">
-                            Cumul réel actuel de vos comptes disponibles ${cfg.depenseFuturMontant > 0 ? `(déduction faite de ${cfg.depenseFuturMontant}€ pour ${cfg.depenseFuturNom} sur ${cfg.depenseFuturCompteCible})` : ''}, placements bloqués et patrimoine supplémentaire.
-                        </div>
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; font-size: 12px; margin-bottom: 15px;">
-                            <div style="background:#0f172a; padding:10px; border-radius:6px;">Valeur Nette Immo / Revente : <b style="color:#38bdf8;">${estimationReventeInstantT.toFixed(2)} €</b></div>
-                            <div style="background:#0f172a; padding:10px; border-radius:6px;">Total Comptes Disponibles : <b style="color:#38bdf8;">${totalDispo.toFixed(2)} €</b> ${cfg.depenseFuturMontant > 0 ? `<span style="font-size:10px; color:#f87171;">(-${cfg.depenseFuturMontant}€)</span>` : ''}</div>
-                            <div style="background:#0f172a; padding:10px; border-radius:6px;">Total Placements Bloqués : <b style="color:#38bdf8;">${totalBloque.toFixed(2)} €</b></div>
-                            <div style="background:#0f172a; padding:10px; border-radius:6px;">Total Patrimoine Supplémentaire : <b style="color:#4ade80;">${totalPatrimoineSupp.toFixed(2)} €</b></div>
+                        <h2 style="margin-top:0; color:#38bdf8; text-transform:uppercase; text-align:center; font-size: 1.2rem;">ESTIMATION PATRIMOINE GLOBALE & INDIVIDUELLE (Aujourd'hui - ${dateDuJourStr})</h2>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                            <div style="background:#1e293b; padding:15px; border-radius:6px; border:2px solid #38bdf8; text-align:center;">
+                                <div style="font-size:12px; color:#94a3b8; text-transform:uppercase; font-weight:bold;">Patrimoine Global Couple</div>
+                                <div style="font-size: 26px; font-weight: 900; color: #4ade80; margin: 8px 0;">${patrimoineTotalInstantT.toFixed(2)} €</div>
+                                <div style="font-size: 11px; color: #cbd5e1;">Immo: ${estimationReventeInstantT.toFixed(0)}€ | Dispo: ${totalDispo.toFixed(0)}€ | Bloqué: ${totalBloque.toFixed(0)}€ | Supp: ${totalPatrimoineSupp.toFixed(0)}€</div>
+                            </div>
+                            <div style="background:#18080a; padding:15px; border-radius:6px; border:2px solid #f87171; text-align:center;">
+                                <div style="font-size:12px; color:#fca5a5; text-transform:uppercase; font-weight:bold;">Patrimoine Partenaire 1 (P1)</div>
+                                <div style="font-size: 26px; font-weight: 900; color: #f87171; margin: 8px 0;">${patrimoineTotalP1.toFixed(2)} €</div>
+                                <div style="font-size: 11px; color: #cbd5e1;">Dispo: ${dispoP1.toFixed(0)}€ | Bloqué: ${bloqueP1.toFixed(0)}€ | Supp: ${patSuppP1.toFixed(0)}€ | Immo Part: ${immoP1.toFixed(0)}€</div>
+                            </div>
+                            <div style="background:#18080a; padding:15px; border-radius:6px; border:2px solid #f87171; text-align:center;">
+                                <div style="font-size:12px; color:#fca5a5; text-transform:uppercase; font-weight:bold;">Patrimoine Partenaire 2 (P2)</div>
+                                <div style="font-size: 26px; font-weight: 900; color: #f87171; margin: 8px 0;">${patrimoineTotalP2.toFixed(2)} €</div>
+                                <div style="font-size: 11px; color: #cbd5e1;">Dispo: ${dispoP2.toFixed(0)}€ | Bloqué: ${bloqueP2.toFixed(0)}€ | Supp: ${patSuppP2.toFixed(0)}€ | Immo Part: ${immoP2.toFixed(0)}€</div>
+                            </div>
                         </div>
 
                         <div style="background:#0b0f19; padding:15px; border-radius:6px; margin-top:20px; border:1px solid #334155;">
-                            <h3 style="margin-top:0; color:#38bdf8; font-size:1rem; text-align:center;">📈 Courbe d'Évolution du Patrimoine (Investissement vs Valeur Visée)</h3>
+                            <h3 style="margin-top:0; color:#38bdf8; font-size:1rem; text-align:center;">📈 Courbe d'Évolution du Patrimoine Global (Investissement vs Valeur Visée)</h3>
                             <div style="display:flex; justify-content:center; gap:20px; font-size:12px; margin-bottom:10px;">
                                 <span style="color:#4ade80; font-weight:bold;">● Courbe Investissement / Actifs</span>
                                 <span style="color:#f87171; font-weight:bold;">● Valeur Cible Visée</span>
@@ -1006,11 +1103,12 @@
                         </div>
                     </div>
 
+                    <!-- SECTION PATRIMOINE GLOBAL -->
                     <div class="card" style="border: 2px solid #38bdf8; background: #0f172a; padding: 20px; border-radius: 8px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #334155; padding-bottom: 12px;">
                             <div>
-                                <h3 style="margin: 0; color: #38bdf8; font-size: 1.1rem; text-transform: uppercase;">📊 Estimations & Projections des Investissements</h3>
-                                <span style="font-size: 11px; color: #94a3b8;">Suivi de la performance de vos placements à long terme</span>
+                                <h3 style="margin: 0; color: #38bdf8; font-size: 1.1rem; text-transform: uppercase;">📊 Estimations & Projections des Investissements (GLOBAL COUPLE)</h3>
+                                <span style="font-size: 11px; color: #94a3b8;">Suivi global de la performance de vos placements à long terme</span>
                             </div>
                             <button type="button" class="action-btn" onclick="sauvegarderFormulaire(null)" style="background:#0284c7; margin:0; padding:6px 12px;">🔄 Recalculer le budget complet</button>
                         </div>
@@ -1033,7 +1131,7 @@
                             </div>
                             <div style="overflow-x: auto;">
                                 <table id="table-dispo" style="margin:0;">
-                                    <tr><th>Nom</th><th>Solde (€)</th><th>Versement Perso (€/m)</th><th>Virement Externe (€/m)</th><th>Rendement (%)</th><th>Action</th></tr>
+                                    <tr><th>Nom</th><th>Solde (€)</th><th>Versement Perso (€/m)</th><th>Virement Externe (€/m)</th><th>Rendement (%)</th><th>Propriétaire</th><th>Action</th></tr>
                                     ${tableDispoHtml}
                                 </table>
                             </div>
@@ -1046,7 +1144,7 @@
                             </div>
                             <div style="overflow-x: auto;">
                                 <table id="table-bloque" style="margin:0;">
-                                    <tr><th>Placement</th><th>Solde (€)</th><th>Versement Perso (€/m)</th><th>Virement Externe (€/m)</th><th>Rendement (%)</th><th>Action</th></tr>
+                                    <tr><th>Placement</th><th>Solde (€)</th><th>Versement Perso (€/m)</th><th>Virement Externe (€/m)</th><th>Rendement (%)</th><th>Propriétaire</th><th>Action</th></tr>
                                     ${tableBloqueHtml}
                                 </table>
                             </div>
@@ -1054,6 +1152,34 @@
                             <div style="margin-top: 15px;">
                                 ${blocksProjetHtml}
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- SECTION PATRIMOINE INDIVIDUEL P1 -->
+                    <div class="card" style="border: 2px solid #f87171; background: #18080a; padding: 20px; border-radius: 8px;">
+                        <h3 style="margin-top: 0; color: #f87171; text-transform: uppercase;">📊 Estimations & Projections - Partenaire 1 (P1)</h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 25px;">
+                            <div style="background:#1e293b; padding:15px; border-radius:6px; border-left: 4px solid #f87171;">
+                                <div style="font-size:11px; color:#94a3b8; text-transform: uppercase; font-weight: bold;">Patrimoine P1 Actuel</div>
+                                <div style="font-size:20px; font-weight:bold; color:#f87171; margin-top:5px;">${patrimoineTotalP1.toFixed(2)} €</div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 15px;">
+                            ${blocksProjetP1Html}
+                        </div>
+                    </div>
+
+                    <!-- SECTION PATRIMOINE INDIVIDUEL P2 -->
+                    <div class="card" style="border: 2px solid #f87171; background: #18080a; padding: 20px; border-radius: 8px;">
+                        <h3 style="margin-top: 0; color: #f87171; text-transform: uppercase;">📊 Estimations & Projections - Partenaire 2 (P2)</h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 25px;">
+                            <div style="background:#1e293b; padding:15px; border-radius:6px; border-left: 4px solid #f87171;">
+                                <div style="font-size:11px; color:#94a3b8; text-transform: uppercase; font-weight: bold;">Patrimoine P2 Actuel</div>
+                                <div style="font-size:20px; font-weight:bold; color:#f87171; margin-top:5px;">${patrimoineTotalP2.toFixed(2)} €</div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 15px;">
+                            ${blocksProjetP2Html}
                         </div>
                     </div>`;
 
@@ -1236,7 +1362,6 @@
 
             let totalLogColspan = cfg.possedeImmo ? '6' : '2';
 
-            // Calculs pour le tableau individuel récapitulatif (basé par défaut sur l'option 20 ans si immo, ou locataire)
             let creditP1 = cfg.possedeImmo ? (m20 / 2) : (cfg.loyerActuel);
             let creditP2 = cfg.possedeImmo ? (m20 / 2) : (cfg.loyerPartConjoint);
             let assuranceP1 = cfg.possedeImmo ? (assuranceMensuelle / 2) : 0;
@@ -1361,7 +1486,6 @@
                             </tbody>
                         </table>
 
-                        <!-- Nouveau tableau de décompte par partenaire individuel -->
                         <div style="margin-top: 25px;">
                             <h3 style="color: #38bdf8; font-size: 1.1rem; text-transform: uppercase; margin-bottom: 10px;">📋 Décompte Global & Récapitulatif par Partenaire</h3>
                             <table>
