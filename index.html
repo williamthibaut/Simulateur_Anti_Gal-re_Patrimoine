@@ -833,13 +833,24 @@
 
                 let svgWidth = 800;
                 let svgHeight = 240;
-                let maxValGraph = Math.max(...graphiquePointsInvest, 100000);
+                let maxValGraph = Math.max(...graphiquePointsInvest, 1000000);
                 let minValGraph = 0;
                 
-                let paliersMontants = [10000, 25000, 50000, 100000, 250000, 1000000];
+                // Fonction de mise à l'échelle non linéaire (ex: racine carrée inversée) pour aérer les petites valeurs
+                // Permet d'étirer le bas et de compresser le haut (les grands montants)
+                let echelleY = (val) => {
+                    let vMax = maxValGraph;
+                    let ratio = Math.min(Math.max(val, 0), vMax) / vMax;
+                    // Transformation puissance (ex: 0.4 donne plus d'espace au bas du graphe)
+                    let ratioTransforme = Math.pow(ratio, 0.45);
+                    let hauteurGraphPx = svgHeight - 65;
+                    return svgHeight - 35 - (ratioTransforme * hauteurGraphPx);
+                };
+
+                let paliersMontants = [10000, 25000, 50000, 100000, 250000, 500000, 1000000];
                 let lignesPaliersSvg = paliersMontants.map(palier => {
                     if (palier <= maxValGraph * 1.1) {
-                        let y = svgHeight - 35 - ((palier - minValGraph) / (maxValGraph - minValGraph || 1)) * (svgHeight - 65);
+                        let y = echelleY(palier);
                         let labelPalier = palier >= 1000000 ? (palier/1000000) + 'M€' : (palier/1000) + 'k€';
                         return `
                             <line x1="60" y1="${y}" x2="${svgWidth-30}" y2="${y}" stroke="#334155" stroke-width="1" stroke-dasharray="2" />
@@ -856,16 +867,17 @@
                     let x = 65 + idx * ((svgWidth - 90) / jalonsAnnees.length);
                     let valTotal = graphiquePointsInvest[idx];
                     let valVerse = graphiquePointsVerse[idx];
-                    if (valVerse > valTotal) valVerse = valTotal; // Sécurité
+                    if (valVerse > valTotal) valVerse = valTotal;
 
-                    let hauteurTotalePx = ((valTotal - minValGraph) / (maxValGraph - minValGraph || 1)) * (svgHeight - 65);
-                    let hauteurVersePx = ((valVerse - minValGraph) / (maxValGraph - minValGraph || 1)) * (svgHeight - 65);
-                    let hauteurBeneficePx = Math.max(0, hauteurTotalePx - hauteurVersePx);
+                    let yTotal = echelleY(valTotal);
+                    let yVerse = echelleY(valVerse);
+                    let yBase = svgHeight - 35;
 
-                    let yTotal = svgHeight - 35 - hauteurTotalePx;
-                    let yVerse = svgHeight - 35 - hauteurVersePx;
+                    let hauteurTotalePx = yBase - yTotal;
+                    let hauteurVersePx = yBase - yVerse;
+                    let hauteurBeneficePx = Math.max(0, yVerse - yTotal);
+
                     let libelleAn = an === 1 ? 'An 1' : `${an}a`;
-
                     let formatMontantCourt = valTotal >= 1000000 ? (valTotal/1000000).toFixed(1) + 'M' : Math.round(valTotal) + '€';
 
                     barresSvgHtml += `
