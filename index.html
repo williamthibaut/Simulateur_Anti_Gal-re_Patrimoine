@@ -3,18 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>App Bank RPG - Simulateur Patrimonial Expert & Smart AI Budget Optimizer</title>
+    <title>App Bank RPG - Simulateur Patrimonial Expert</title>
     <style>
         body { font-family: Arial, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 10px; }
         .container { max-width: 1400px; margin: auto; background: #1e293b; padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
         h1, h2, h3 { color: #38bdf8; }
-        .nav { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
-        .nav button { padding: 8px 12px; background: #334155; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
-        .nav button.active { background: #38bdf8; color: #0f172a; font-weight: bold; }
+        
+        /* Style des grands onglets en haut */
+        .main-tabs-container { display: flex; gap: 10px; margin-bottom: 10px; width: 100%; }
+        .main-tabs-container button { flex: 1; padding: 14px 20px; background: #334155; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; text-transform: uppercase; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .main-tabs-container button:hover { background: #475569; }
+        .main-tabs-container button.active { background: #38bdf8; color: #0f172a; box-shadow: 0 0 12px rgba(56,189,248,0.4); }
+
+        /* Style des boutons Célibataire / Coloc / Couple (Bleu moins pétant) */
+        .couple-tab-container { margin-bottom: 20px; width: 100%; text-align: center; display: flex; justify-content: center; gap: 10px; }
+        .couple-tab-container button { padding: 8px 16px; background: #1e293b; color: #7dd3fc; border: 1px solid #0284c7; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; text-transform: uppercase; transition: all 0.2s; }
+        .couple-tab-container button:hover { background: #0284c7; color: #ffffff; }
+        .couple-tab-container button.active { background: #0284c7; color: #ffffff; border-color: #38bdf8; box-shadow: 0 0 8px rgba(2,132,199,0.4); }
+
         table { width: 100%; border-collapse: collapse; margin-top: 10px; background: #0f172a; font-size: 12px; }
         th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #334155; white-space: nowrap; }
         th { background: #334155; }
         
+        th.selected-loan-col, td.selected-loan-col { background: rgba(56, 189, 248, 0.12); border-left: 2px solid #38bdf8; border-right: 2px solid #38bdf8; }
+        th.clickable-loan-header { cursor: pointer; text-decoration: underline; }
+        th.clickable-loan-header:hover { color: #4ade80; }
+
         .form-section-card { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 15px; margin-bottom: 15px; transition: opacity 0.3s ease, filter 0.3s ease; }
         .form-section-card.disabled-section { opacity: 0.45; }
         .form-section-card.disabled-section input:not([type="checkbox"]), 
@@ -60,6 +74,17 @@
             </div>
         </div>
 
+        <!-- ONGLETS PRINCIPAUX + BOUTONS STATUT (CELIBATAIRE - COLOC - COUPLE) -->
+        <div class="main-tabs-container">
+            <button id="btn-proprietaire" onclick="changerMode('proprietaire')">Ressources & Dépenses</button>
+            <button id="btn-projet" onclick="changerMode('projet')">Projet & Patrimoine</button>
+        </div>
+        <div class="couple-tab-container">
+            <button id="btn-celibataire" class="active" onclick="changerStatutFoyer('celibataire')">Célibataire</button>
+            <button id="btn-coloc" onclick="changerStatutFoyer('coloc')">Colocataires (WIP)</button>
+            <button id="btn-couple" onclick="changerStatutFoyer('couple')">Couple (WIP)</button>
+        </div>
+
         <!-- EN-TÊTE PROFIL & SAUVEGARDE MULTI-PROFILS -->
         <div style="background:linear-gradient(135deg, #1e293b, #0f172a); border:2px solid #38bdf8; padding:15px; border-radius:8px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px; box-shadow:0 0 15px rgba(56,189,248,0.25);">
             <div>
@@ -74,24 +99,18 @@
                 <button type="button" onclick="supprimerProfilActif()" style="background:#ef4444; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:bold;">🗑️ Supprimer</button>
             </div>
         </div>
-
-        <div style="display:flex; justify-content:flex-end; align-items:center; margin-bottom: 15px;">
-            <div class="nav" style="margin-bottom:0;">
-                <button id="btn-couple" onclick="changerMode('couple')">👥 Couple</button>
-                <button id="btn-proprietaire" onclick="changerMode('proprietaire')">Ressources & Dépenses</button>
-                <button id="btn-projet" onclick="changerMode('projet')">Projet & Patrimoine</button>
-                <button id="btn-ia" onclick="changerMode('ia')" style="background:#0284c7; font-weight:bold;">🤖 Smart AI</button>
-            </div>
-        </div>
         
         <div id="app-content"></div>
     </div>
 
     <script>
         let modeActuel = 'proprietaire';
+        let statutFoyerActuel = 'celibataire';
         let dernierMessageAlerte = '';
         let utilisateurActuel = localStorage.getItem('appBankRpgUserActif') || null;
         let profilActifNom = '';
+        
+        let dureeBilanImmo = 20; 
         
         let cfg = {
             salaireBrut: 2950,
@@ -153,7 +172,6 @@
 
         let snapshotDernierEnregistrement = null;
 
-        // --- GESTION COMPTES & AUTH ---
         function afficherInterfaceAuth() {
             const authForm = document.getElementById('auth-form-container');
             const authInfo = document.getElementById('auth-user-info');
@@ -213,7 +231,6 @@
             render();
         }
 
-        // --- GESTION MULTI-PROFILS ---
         function getStorageKeyProfils() {
             return `appBankRpgProfils_${utilisateurActuel}`;
         }
@@ -246,7 +263,8 @@
                 abonnementsVie,
                 comptesDispo,
                 placementsBloques,
-                patrimoineSupplementaire
+                patrimoineSupplementaire,
+                dureeBilanImmo
             };
 
             localStorage.setItem(getStorageKeyProfils(), JSON.stringify(profilsObj));
@@ -266,6 +284,7 @@
             comptesDispo = data.comptesDispo;
             placementsBloques = data.placementsBloques;
             patrimoineSupplementaire = data.patrimoineSupplementaire;
+            if (data.dureeBilanImmo) dureeBilanImmo = data.dureeBilanImmo;
             profilActifNom = nomProfil;
             
             faireSnapshotFormulaire();
@@ -297,7 +316,8 @@
                 abonnementsVie: JSON.parse(JSON.stringify(abonnementsVie)),
                 comptesDispo: JSON.parse(JSON.stringify(comptesDispo)),
                 placementsBloques: JSON.parse(JSON.stringify(placementsBloques)),
-                patrimoineSupplementaire: JSON.parse(JSON.stringify(patrimoineSupplementaire))
+                patrimoineSupplementaire: JSON.parse(JSON.stringify(patrimoineSupplementaire)),
+                dureeBilanImmo
             };
             dernierMessageAlerte = "💾 Budget validé et enregistré comme référence pour le reset !";
         }
@@ -313,6 +333,7 @@
             comptesDispo = JSON.parse(JSON.stringify(snapshotDernierEnregistrement.comptesDispo));
             placementsBloques = JSON.parse(JSON.stringify(snapshotDernierEnregistrement.placementsBloques));
             patrimoineSupplementaire = JSON.parse(JSON.stringify(snapshotDernierEnregistrement.patrimoineSupplementaire));
+            dureeBilanImmo = snapshotDernierEnregistrement.dureeBilanImmo || 20;
             dernierMessageAlerte = "↩️ Restauration effectuée : retour aux valeurs du dernier 'Mettre à jour le budget'.";
             render();
         }
@@ -336,12 +357,28 @@
             return (capital * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
         }
 
+        function changerDureePret(nouvelleDuree) {
+            dureeBilanImmo = parseInt(nouvelleDuree) || 20;
+            cfg.optionCibleOptimisation = String(dureeBilanImmo);
+            render();
+        }
+
         function changerMode(nouveauMode) {
-            if (nouveauMode === 'couple') {
+            modeActuel = nouveauMode;
+            render();
+        }
+
+        function changerStatutFoyer(nouveauStatut) {
+            if (nouveauStatut === 'couple') {
                 window.location.href = 'couple.html';
                 return;
             }
-            modeActuel = nouveauMode;
+            if (nouveauStatut === 'coloc') {
+                window.location.href = 'coloc.html';
+                return;
+            }
+            statutFoyerActuel = nouveauStatut;
+            modeActuel = 'proprietaire';
             render();
         }
 
@@ -449,6 +486,7 @@
             const selectOptionOpt = document.getElementById('sel-option-optimisation');
             if (selectOptionOpt) {
                 cfg.optionCibleOptimisation = selectOptionOpt.value;
+                dureeBilanImmo = parseInt(selectOptionOpt.value) || dureeBilanImmo;
             }
 
             const selectSurplus = document.getElementById('sel-surplus-strategie');
@@ -469,6 +507,12 @@
 
             const selDepCompte = document.getElementById('sel-depense-compte');
             if (selDepCompte) cfg.depenseFuturCompteCible = selDepCompte.value;
+
+            const selDureeImmoBilan = document.getElementById('sel-duree-immo-bilan');
+            if (selDureeImmoBilan) {
+                dureeBilanImmo = parseInt(selDureeImmoBilan.value) || dureeBilanImmo;
+                cfg.optionCibleOptimisation = String(dureeBilanImmo);
+            }
         }
 
         function sauvegarderFormulaire(event) {
@@ -522,7 +566,7 @@
             const coutTotalProjet = cfg.prixAnnonce + fraisNotaireCalculés + cfg.travaux;
             const capitalEmprunte = Math.max(0, (cfg.montantProjet > 0 ? cfg.montantProjet : coutTotalProjet) - cfg.apport);
 
-            let dureeCible = parseInt(cfg.optionCibleOptimisation) || 20;
+            let dureeCible = parseInt(cfg.optionCibleOptimisation) || dureeBilanImmo;
             let tauxCible = cfg.taeg;
             if (dureeCible === 10) tauxCible -= 0.5;
             else if (dureeCible === 15) tauxCible -= 0.3;
@@ -640,9 +684,16 @@
                 cfg.salaireNet = (brutTotal * 0.78) * (1 - (cfg.tauxPas / 100));
             }
 
-            document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+            // Gestion propre des états actifs des onglets principaux
+            document.querySelectorAll('.main-tabs-container button').forEach(b => b.classList.remove('active'));
             if(document.getElementById(`btn-${modeActuel}`)) {
                 document.getElementById(`btn-${modeActuel}`).classList.add('active');
+            }
+
+            // Gestion propre des états actifs du sous-menu foyer
+            document.querySelectorAll('.couple-tab-container button').forEach(b => b.classList.remove('active'));
+            if(document.getElementById(`btn-${statutFoyerActuel}`)) {
+                document.getElementById(`btn-${statutFoyerActuel}`).classList.add('active');
             }
 
             const content = document.getElementById('app-content');
@@ -740,7 +791,6 @@
                             <div class="form-group"><label>Prélèvement à la source (%)</label>${makeInput('tauxPas', cfg.tauxPas)}</div>
                             <div class="form-group"><label>Salaire Net Réel (Calculé)</label><div class="input-wrapper"><input type="number" step="any" name="salaireNet" value="${cfg.salaireNet.toFixed(2)}" readonly style="color:#4ade80;"></div></div>
                         </div>
-                        
                         <button type="submit" class="action-btn">Valider</button>
                     </div>
 
@@ -869,16 +919,6 @@
                 </form>
             `;
 
-            let sectionIAHtml = '';
-            if (modeActuel === 'ia') {
-                sectionIAHtml = `<div class="card" style="border:2px dashed #38bdf8; background:#0b0f19;">
-                    <h3 style="margin-top:0; color:#38bdf8;">🤖 Smart AI Budget Optimizer - Mode Arcade</h3>
-                    <div style="font-size:13px; color:#cbd5e1; margin-bottom:15px;">
-                        Choisis l'option cible de durée, définis ton objectif de sécurité, puis clique sur le bouton rouge pour rééquilibrer précisément cette option sans toucher aux autres ! 🎮
-                    </div>
-                </div>`;
-            }
-
             let projetHtml = '';
             if (modeActuel === 'projet') {
                 let dateDuJourStr = "8 août 2026";
@@ -892,14 +932,15 @@
                 let diffMois = (anneeActuelleNum - anneeDebutImmo) * 12 + (moisActuelNum - moisDebutImmo);
                 let estimationReventeInstantT = 0;
 
+                let mensualiteImmoActive = calculerPret(capitalEmprunte, cfg.taeg, dureeBilanImmo);
+
                 if (diffMois > 0 && cfg.possedeImmo) {
                     let rM = cfg.taeg / 100 / 12;
-                    let mensualiteImmo = m20; 
                     let capRestant = capitalEmprunte;
                     let capitalRembourseInstantT = 0;
                     for(let mIdx = 0; mIdx < diffMois; mIdx++) {
                         let interetsMois = capRestant * rM;
-                        let partAmortissement = mensualiteImmo - interetsMois;
+                        let partAmortissement = mensualiteImmoActive - interetsMois;
                         capitalRembourseInstantT += partAmortissement;
                         capRestant -= partAmortissement;
                     }
@@ -1086,18 +1127,11 @@
                     }
 
                     barresSvgHtml += `
-                        <!-- Partie Haute: Bénéfices de rendement (Vert clair) -->
                         <rect x="${x}" y="${yTotal}" width="${largeurBarre}" height="${hauteurBeneficePx}" fill="#4ade80" stroke="#00ffcc" stroke-width="1" rx="2" />
-                        
-                        <!-- Partie Basse: Montant investi (Bleu foncé) -->
                         <rect x="${x}" y="${yVerse}" width="${largeurBarre}" height="${hauteurVersePx}" fill="#1e3a8a" stroke="#38bdf8" stroke-width="1" rx="2" />
                         ${hauteurVersePx > 18 ? `<text x="${x + largeurBarre/2}" y="${yVerse + hauteurVersePx/2 + 3}" fill="#93c5fd" font-size="7" font-weight="bold" text-anchor="middle">${formatMontantVerse}</text>` : ''}
-                        
                         ${depassementHtml}
-
                         ${valTotal <= 1000000 ? `<text x="${x + largeurBarre/2}" y="${yTotal - 5}" fill="#f8fafc" font-size="8" font-weight="bold" text-anchor="middle">${formatMontantTotal}</text>` : ''}
-                        
-                        <!-- Libellé de l'année en bas -->
                         <text x="${x + largeurBarre/2}" y="${svgHeight-15}" fill="#94a3b8" font-size="9" text-anchor="middle">${libelleAn}</text>
                     `;
                 });
@@ -1129,7 +1163,6 @@
                                     ${lignesPaliersSvg}
                                     <line x1="60" y1="20" x2="60" y2="${svgHeight-30}" stroke="#475569" stroke-width="1.5" />
                                     <line x1="60" y1="${svgHeight-30}" x2="${svgWidth-30}" y2="${svgHeight-30}" stroke="#475569" stroke-width="1.5" />
-                                    
                                     ${barresSvgHtml}
                                 </svg>
                             </div>
@@ -1180,7 +1213,13 @@
                     const coutTotalSansCredit = cfg.prixAnnonce + fraisNotaireVal + cfg.travaux;
                     
                     const calcDetailImmo = (cap, tauxAnnuel, duree) => {
-                        const m = calculerPret(cap, tauxAnnuel, duree);
+                        let tCible = tauxAnnuel;
+                        if (duree === 10) tCible -= 0.5;
+                        else if (duree === 15) tCible -= 0.3;
+                        else if (duree === 25) tCible += 0.2;
+                        else if (duree === 30) tCible += 0.4;
+
+                        const m = calculerPret(cap, tCible, duree);
                         const totalVerse = m * duree * 12;
                         const assuranceTotale = (cap * (cfg.assuranceTauxAnnuel / 100)) * duree;
                         const montantInterets = (totalVerse - cap) + assuranceTotale;
@@ -1188,18 +1227,30 @@
                         return { m, montantInterets, coutGlobalProjet };
                     };
 
-                    const det20 = calcDetailImmo(capitalEmprunte, cfg.taeg, 20);
+                    const detSelectionne = calcDetailImmo(capitalEmprunte, cfg.taeg, dureeBilanImmo);
 
                     projetHtml += `<div class="card">
-                        <h3 style="margin-top:0;">🏠 Bilan Immobilier & Décomposition Détaillée (Exemple Option 20 Ans)</h3>
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:15px;">
+                            <h3 style="margin:0;">🏠 Bilan Immobilier & Décomposition Détaillée</h3>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <label style="font-size:12px; color:#94a3b8; font-weight:bold;">Durée du prêt :</label>
+                                <select id="sel-duree-immo-bilan" onchange="changerDureePret(this.value)" style="background:#1e293b; color:#38bdf8; border:1px solid #38bdf8; padding:6px 10px; border-radius:4px; font-weight:bold; font-size:13px; outline:none;">
+                                    <option value="10" ${dureeBilanImmo===10?'selected':''}>10 Ans</option>
+                                    <option value="15" ${dureeBilanImmo===15?'selected':''}>15 Ans</option>
+                                    <option value="20" ${dureeBilanImmo===20?'selected':''}>20 Ans</option>
+                                    <option value="25" ${dureeBilanImmo===25?'selected':''}>25 Ans</option>
+                                    <option value="30" ${dureeBilanImmo===30?'selected':''}>30 Ans</option>
+                                </select>
+                            </div>
+                        </div>
                         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px; margin-top:10px; font-size:13px;">
                             <div style="background:#0f172a; padding:12px; border-radius:6px;">Prix Hors Frais Notaire : <br><b style="color:#38bdf8; font-size:1.2em;">${cfg.prixAnnonce.toFixed(0)} €</b></div>
                             <div style="background:#0f172a; padding:12px; border-radius:6px;">Frais de Notaire (${cfg.fraisNotaireTaux}%) : <br><b style="color:#38bdf8; font-size:1.2em;">${fraisNotaireVal.toFixed(0)} €</b></div>
                             <div style="background:#0f172a; padding:12px; border-radius:6px;">Travaux : <br><b style="color:#38bdf8; font-size:1.2em;">${cfg.travaux.toFixed(0)} €</b></div>
-                            <div style="background:#0f172a; padding:12px; border-radius:6px;">Montant Total Intérêts + Assurance : <br><b style="color:#f87171; font-size:1.2em;">${det20.montantInterets.toFixed(0)} €</b></div>
+                            <div style="background:#0f172a; padding:12px; border-radius:6px;">Montant Total Intérêts + Assurance (${dureeBilanImmo} ans) : <br><b style="color:#f87171; font-size:1.2em;">${detSelectionne.montantInterets.toFixed(0)} €</b></div>
                             <div style="background:#0f172a; padding:15px; border-radius:6px; grid-column: 1 / -1; border: 1px solid #4ade80; text-align:center;">
                                 Coût Global du Projet (Apport + Crédit + Frais + Intérêts) : <br>
-                                <b style="color:#4ade80; font-size:1.6em; display:block; margin-top:5px;">${det20.coutGlobalProjet.toFixed(0)} €</b>
+                                <b style="color:#4ade80; font-size:1.6em; display:block; margin-top:5px;">${detSelectionne.coutGlobalProjet.toFixed(0)} €</b>
                             </div>
                         </div>
 
@@ -1216,10 +1267,16 @@
                     let anneesTab = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30];
                     anneesTab.forEach(annee => {
                         let moisEcoules = annee * 12;
-                        let rM = cfg.taeg / 100 / 12;
+                        let tCibleAnnee = cfg.taeg;
+                        if (dureeBilanImmo === 10) tCibleAnnee -= 0.5;
+                        else if (dureeBilanImmo === 15) tCibleAnnee -= 0.3;
+                        else if (dureeBilanImmo === 25) tCibleAnnee += 0.2;
+                        else if (dureeBilanImmo === 30) tCibleAnnee += 0.4;
+
+                        let rM = tCibleAnnee / 100 / 12;
                         let capitalRembourse = 0;
                         if (capitalEmprunte > 0 && rM > 0) {
-                            let mensualite = det20.m;
+                            let mensualite = detSelectionne.m;
                             let capRestant = capitalEmprunte;
                             for(let mIdx = 0; mIdx < moisEcoules; mIdx++) {
                                 let interetsMois = capRestant * rM;
@@ -1263,70 +1320,130 @@
                 let badgeLigne = abo.montant === 0 ? ' <span style="font-size:9px; background:#ef4444; color:white; padding:1px 4px; border-radius:3px; vertical-align:middle;">À SUPPRIMER</span>' : '';
                 
                 if (cfg.possedeImmo) {
-                    abosHtml += `<tr style="${styleLigneAbo}"><td>${abo.nom}${badgeLigne}</td><td>-${abo.montant.toFixed(2)} €</td><td>-${abo.montant.toFixed(2)} €</td><td>-${abo.montant.toFixed(2)} €</td><td>-${abo.montant.toFixed(2)} €</td><td>-${abo.montant.toFixed(2)} €</td></tr>`;
+                    abosHtml += `<tr style="${styleLigneAbo}">
+                        <td>${abo.nom}${badgeLigne}</td>
+                        <td class="${dureeBilanImmo===10?'selected-loan-col':''}">-${abo.montant.toFixed(2)} €</td>
+                        <td class="${dureeBilanImmo===15?'selected-loan-col':''}">-${abo.montant.toFixed(2)} €</td>
+                        <td class="${dureeBilanImmo===20?'selected-loan-col':''}">-${abo.montant.toFixed(2)} €</td>
+                        <td class="${dureeBilanImmo===25?'selected-loan-col':''}">-${abo.montant.toFixed(2)} €</td>
+                        <td class="${dureeBilanImmo===30?'selected-loan-col':''}">-${abo.montant.toFixed(2)} €</td>
+                    </tr>`;
                 } else {
                     abosHtml += `<tr style="${styleLigneAbo}"><td>${abo.nom}${badgeLigne}</td><td>-${abo.montant.toFixed(2)} €</td></tr>`;
                 }
             });
 
-            const getResteStyle = (val) => {
+            const getResteStyle = (val, isSelected) => {
                 let isOk = val >= 0;
                 let bg = isOk ? 'rgba(74, 222, 128, 0.15)' : 'rgba(239, 68, 68, 0.15)';
                 let color = isOk ? '#4ade80' : '#ef4444';
-                return `background:${bg}; color:${color}; font-size:1.1em; font-weight:900; border: 2px solid ${color};`;
+                let extraBorder = isSelected ? '; border: 3px solid #38bdf8;' : `; border: 2px solid ${color};`;
+                return `background:${bg}; color:${color}; font-size:1.1em; font-weight:900${extraBorder}`;
             };
 
             let entetesTableau = cfg.possedeImmo ? `
-                <th>Option 10 Ans</th>
-                <th>Option 15 Ans</th>
-                <th>Option 20 Ans</th>
-                <th>Option 25 Ans</th>
-                <th>Option 30 Ans</th>
+                <th class="clickable-loan-header ${dureeBilanImmo===10?'selected-loan-col':''}" onclick="changerDureePret(10)" title="Cliquer pour sélectionner l'option 10 ans">Option 10 Ans</th>
+                <th class="clickable-loan-header ${dureeBilanImmo===15?'selected-loan-col':''}" onclick="changerDureePret(15)" title="Cliquer pour sélectionner l'option 15 ans">Option 15 Ans</th>
+                <th class="clickable-loan-header ${dureeBilanImmo===20?'selected-loan-col':''}" onclick="changerDureePret(20)" title="Cliquer pour sélectionner l'option 20 ans">Option 20 Ans</th>
+                <th class="clickable-loan-header ${dureeBilanImmo===25?'selected-loan-col':''}" onclick="changerDureePret(25)" title="Cliquer pour sélectionner l'option 25 ans">Option 25 Ans</th>
+                <th class="clickable-loan-header ${dureeBilanImmo===30?'selected-loan-col':''}" onclick="changerDureePret(30)" title="Cliquer pour sélectionner l'option 30 ans">Option 30 Ans</th>
             ` : `
                 <th>Budget Locataire Actuel</th>
             `;
 
             let cellulesLogement = cfg.possedeImmo ? `
-                <tr><td>Crédit Immobilier</td><td>-${m10.toFixed(2)} €</td><td>-${m15.toFixed(2)} €</td><td>-${m20.toFixed(2)} €</td><td>-${m25.toFixed(2)} €</td><td>-${m30.toFixed(2)} €</td></tr>
-                <tr><td>Assurance Emprunteur</td><td>-${assuranceMensuelle.toFixed(2)} €</td><td>-${assuranceMensuelle.toFixed(2)} €</td><td>-${assuranceMensuelle.toFixed(2)} €</td><td>-${assuranceMensuelle.toFixed(2)} €</td><td>-${assuranceMensuelle.toFixed(2)} €</td></tr>
-                <tr><td>Charges de Copropriété</td><td>-${cfg.copro.toFixed(2)} €</td><td>-${cfg.copro.toFixed(2)} €</td><td>-${cfg.copro.toFixed(2)} €</td><td>-${cfg.copro.toFixed(2)} €</td><td>-${cfg.copro.toFixed(2)} €</td></tr>
-                <tr><td>Taxe Foncière</td><td>-${cfg.taxe.toFixed(2)} €</td><td>-${cfg.taxe.toFixed(2)} €</td><td>-${cfg.taxe.toFixed(2)} €</td><td>-${cfg.taxe.toFixed(2)} €</td><td>-${cfg.taxe.toFixed(2)} €</td></tr>
+                <tr>
+                    <td>Crédit Immobilier</td>
+                    <td class="${dureeBilanImmo===10?'selected-loan-col':''}">-${m10.toFixed(2)} €</td>
+                    <td class="${dureeBilanImmo===15?'selected-loan-col':''}">-${m15.toFixed(2)} €</td>
+                    <td class="${dureeBilanImmo===20?'selected-loan-col':''}">-${m20.toFixed(2)} €</td>
+                    <td class="${dureeBilanImmo===25?'selected-loan-col':''}">-${m25.toFixed(2)} €</td>
+                    <td class="${dureeBilanImmo===30?'selected-loan-col':''}">-${m30.toFixed(2)} €</td>
+                </tr>
+                <tr>
+                    <td>Assurance Emprunteur</td>
+                    <td class="${dureeBilanImmo===10?'selected-loan-col':''}">-${assuranceMensuelle.toFixed(2)} €</td>
+                    <td class="${dureeBilanImmo===15?'selected-loan-col':''}">-${assuranceMensuelle.toFixed(2)} €</td>
+                    <td class="${dureeBilanImmo===20?'selected-loan-col':''}">-${assuranceMensuelle.toFixed(2)} €</td>
+                    <td class="${dureeBilanImmo===25?'selected-loan-col':''}">-${assuranceMensuelle.toFixed(2)} €</td>
+                    <td class="${dureeBilanImmo===30?'selected-loan-col':''}">-${assuranceMensuelle.toFixed(2)} €</td>
+                </tr>
+                <tr>
+                    <td>Charges de Copropriété</td>
+                    <td class="${dureeBilanImmo===10?'selected-loan-col':''}">-${cfg.copro.toFixed(2)} €</td>
+                    <td class="${dureeBilanImmo===15?'selected-loan-col':''}">-${cfg.copro.toFixed(2)} €</td>
+                    <td class="${dureeBilanImmo===20?'selected-loan-col':''}">-${cfg.copro.toFixed(2)} €</td>
+                    <td class="${dureeBilanImmo===25?'selected-loan-col':''}">-${cfg.copro.toFixed(2)} €</td>
+                    <td class="${dureeBilanImmo===30?'selected-loan-col':''}">-${cfg.copro.toFixed(2)} €</td>
+                </tr>
+                <tr>
+                    <td>Taxe Foncière</td>
+                    <td class="${dureeBilanImmo===10?'selected-loan-col':''}">-${cfg.taxe.toFixed(2)} €</td>
+                    <td class="${dureeBilanImmo===15?'selected-loan-col':''}">-${cfg.taxe.toFixed(2)} €</td>
+                    <td class="${dureeBilanImmo===20?'selected-loan-col':''}">-${cfg.taxe.toFixed(2)} €</td>
+                    <td class="${dureeBilanImmo===25?'selected-loan-col':''}">-${cfg.taxe.toFixed(2)} €</td>
+                    <td class="${dureeBilanImmo===30?'selected-loan-col':''}">-${cfg.taxe.toFixed(2)} €</td>
+                </tr>
             ` : `
                 <tr><td>Loyer Actuel</td><td>-${cfg.loyerActuel.toFixed(2)} €</td></tr>
             `;
 
             let colonnesInvestHtml = cfg.possedeImmo ? `
-                <td>-${cfg.pea.toFixed(2)} €</td><td>-${cfg.pea.toFixed(2)} €</td><td>-${cfg.pea.toFixed(2)} €</td><td>-${cfg.pea.toFixed(2)} €</td><td>-${cfg.pea.toFixed(2)} €</td>
+                <td class="${dureeBilanImmo===10?'selected-loan-col':''}">-${cfg.pea.toFixed(2)} €</td>
+                <td class="${dureeBilanImmo===15?'selected-loan-col':''}">-${cfg.pea.toFixed(2)} €</td>
+                <td class="${dureeBilanImmo===20?'selected-loan-col':''}">-${cfg.pea.toFixed(2)} €</td>
+                <td class="${dureeBilanImmo===25?'selected-loan-col':''}">-${cfg.pea.toFixed(2)} €</td>
+                <td class="${dureeBilanImmo===30?'selected-loan-col':''}">-${cfg.pea.toFixed(2)} €</td>
             ` : `
                 <td>-${cfg.pea.toFixed(2)} €</td>
             `;
 
             let colonnesPerHtml = cfg.possedeImmo ? `
-                <td>-${cfg.per.toFixed(2)} €</td><td>-${cfg.per.toFixed(2)} €</td><td>-${cfg.per.toFixed(2)} €</td><td>-${cfg.per.toFixed(2)} €</td><td>-${cfg.per.toFixed(2)} €</td>
+                <td class="${dureeBilanImmo===10?'selected-loan-col':''}">-${cfg.per.toFixed(2)} €</td>
+                <td class="${dureeBilanImmo===15?'selected-loan-col':''}">-${cfg.per.toFixed(2)} €</td>
+                <td class="${dureeBilanImmo===20?'selected-loan-col':''}">-${cfg.per.toFixed(2)} €</td>
+                <td class="${dureeBilanImmo===25?'selected-loan-col':''}">-${cfg.per.toFixed(2)} €</td>
+                <td class="${dureeBilanImmo===30?'selected-loan-col':''}">-${cfg.per.toFixed(2)} €</td>
             ` : `
                 <td>-${cfg.per.toFixed(2)} €</td>
             `;
 
             let colonnesBitstackHtml = cfg.possedeImmo ? `
-                <td>-${cfg.bitstack.toFixed(2)} €</td><td>-${cfg.bitstack.toFixed(2)} €</td><td>-${cfg.bitstack.toFixed(2)} €</td><td>-${cfg.bitstack.toFixed(2)} €</td><td>-${cfg.bitstack.toFixed(2)} €</td>
+                <td class="${dureeBilanImmo===10?'selected-loan-col':''}">-${cfg.bitstack.toFixed(2)} €</td>
+                <td class="${dureeBilanImmo===15?'selected-loan-col':''}">-${cfg.bitstack.toFixed(2)} €</td>
+                <td class="${dureeBilanImmo===20?'selected-loan-col':''}">-${cfg.bitstack.toFixed(2)} €</td>
+                <td class="${dureeBilanImmo===25?'selected-loan-col':''}">-${cfg.bitstack.toFixed(2)} €</td>
+                <td class="${dureeBilanImmo===30?'selected-loan-col':''}">-${cfg.bitstack.toFixed(2)} €</td>
             ` : `
                 <td>-${cfg.bitstack.toFixed(2)} €</td>
             `;
 
             let colonnesLepHtml = cfg.possedeImmo ? `
-                <td>-${cfg.lep.toFixed(2)} €</td><td>-${cfg.lep.toFixed(2)} €</td><td>-${cfg.lep.toFixed(2)} €</td><td>-${cfg.lep.toFixed(2)} €</td><td>-${cfg.lep.toFixed(2)} €</td>
+                <td class="${dureeBilanImmo===10?'selected-loan-col':''}">-${cfg.lep.toFixed(2)} €</td>
+                <td class="${dureeBilanImmo===15?'selected-loan-col':''}">-${cfg.lep.toFixed(2)} €</td>
+                <td class="${dureeBilanImmo===20?'selected-loan-col':''}">-${cfg.lep.toFixed(2)} €</td>
+                <td class="${dureeBilanImmo===25?'selected-loan-col':''}">-${cfg.lep.toFixed(2)} €</td>
+                <td class="${dureeBilanImmo===30?'selected-loan-col':''}">-${cfg.lep.toFixed(2)} €</td>
             ` : `
                 <td>-${cfg.lep.toFixed(2)} €</td>
             `;
 
             let colonnesCoursesHtml = cfg.possedeImmo ? `
-                <td>-${cfg.courses.toFixed(2)} €</td><td>-${cfg.courses.toFixed(2)} €</td><td>-${cfg.courses.toFixed(2)} €</td><td>-${cfg.courses.toFixed(2)} €</td><td>-${cfg.courses.toFixed(2)} €</td>
+                <td class="${dureeBilanImmo===10?'selected-loan-col':''}">-${cfg.courses.toFixed(2)} €</td>
+                <td class="${dureeBilanImmo===15?'selected-loan-col':''}">-${cfg.courses.toFixed(2)} €</td>
+                <td class="${dureeBilanImmo===20?'selected-loan-col':''}">-${cfg.courses.toFixed(2)} €</td>
+                <td class="${dureeBilanImmo===25?'selected-loan-col':''}">-${cfg.courses.toFixed(2)} €</td>
+                <td class="${dureeBilanImmo===30?'selected-loan-col':''}">-${cfg.courses.toFixed(2)} €</td>
             ` : `
                 <td>-${cfg.courses.toFixed(2)} €</td>
             `;
 
             let colonnesLoisirsHtml = cfg.possedeImmo ? `
-                <td>-${cfg.loisirs.toFixed(2)} €</td><td>-${cfg.loisirs.toFixed(2)} €</td><td>-${cfg.loisirs.toFixed(2)} €</td><td>-${cfg.loisirs.toFixed(2)} €</td><td>-${cfg.loisirs.toFixed(2)} €</td>
+                <td class="${dureeBilanImmo===10?'selected-loan-col':''}">-${cfg.loisirs.toFixed(2)} €</td>
+                <td class="${dureeBilanImmo===15?'selected-loan-col':''}">-${cfg.loisirs.toFixed(2)} €</td>
+                <td class="${dureeBilanImmo===20?'selected-loan-col':''}">-${cfg.loisirs.toFixed(2)} €</td>
+                <td class="${dureeBilanImmo===25?'selected-loan-col':''}">-${cfg.loisirs.toFixed(2)} €</td>
+                <td class="${dureeBilanImmo===30?'selected-loan-col':''}">-${cfg.loisirs.toFixed(2)} €</td>
             ` : `
                 <td>-${cfg.loisirs.toFixed(2)} €</td>
             `;
@@ -1334,11 +1451,11 @@
             let totalLogColspan = cfg.possedeImmo ? '6' : '2';
 
             let optionsSelectHtml = cfg.possedeImmo ? `
-                <option value="10" ${cfg.optionCibleOptimisation==='10'?'selected':''}>Option 10 Ans</option>
-                <option value="15" ${cfg.optionCibleOptimisation==='15'?'selected':''}>Option 15 Ans</option>
-                <option value="20" ${cfg.optionCibleOptimisation==='20'?'selected':''}>Option 20 Ans</option>
-                <option value="25" ${cfg.optionCibleOptimisation==='25'?'selected':''}>Option 25 Ans</option>
-                <option value="30" ${cfg.optionCibleOptimisation==='30'?'selected':''}>Option 30 Ans</option>
+                <option value="10" ${dureeBilanImmo===10?'selected':''}>Option 10 Ans</option>
+                <option value="15" ${dureeBilanImmo===15?'selected':''}>Option 15 Ans</option>
+                <option value="20" ${dureeBilanImmo===20?'selected':''}>Option 20 Ans</option>
+                <option value="25" ${dureeBilanImmo===25?'selected':''}>Option 25 Ans</option>
+                <option value="30" ${dureeBilanImmo===30?'selected':''}>Option 30 Ans</option>
             ` : `
                 <option value="20" selected>Mode Locataire Unique</option>
             `;
@@ -1349,7 +1466,7 @@
                         <table>
                             <thead>
                                 <tr style="background:#334155; text-align:left;">
-                                    <th>Catégories de Flux Financiers</th>
+                                    <th>Catégories de Flux Financiers (Cliquez sur un en-tête de prêt pour le sélectionner)</th>
                                     ${entetesTableau}
                                 </tr>
                             </thead>
@@ -1357,11 +1474,11 @@
                                 <tr>
                                     <td><b>SALAIRE NET MENSUEL</b></td>
                                     ${cfg.possedeImmo ? `
-                                        <td style="color:#4ade80">+${cfg.salaireNet.toFixed(2)} €</td>
-                                        <td style="color:#4ade80">+${cfg.salaireNet.toFixed(2)} €</td>
-                                        <td style="color:#4ade80">+${cfg.salaireNet.toFixed(2)} €</td>
-                                        <td style="color:#4ade80">+${cfg.salaireNet.toFixed(2)} €</td>
-                                        <td style="color:#4ade80">+${cfg.salaireNet.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===10?'selected-loan-col':''}" style="color:#4ade80">+${cfg.salaireNet.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===15?'selected-loan-col':''}" style="color:#4ade80">+${cfg.salaireNet.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===20?'selected-loan-col':''}" style="color:#4ade80">+${cfg.salaireNet.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===25?'selected-loan-col':''}" style="color:#4ade80">+${cfg.salaireNet.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===30?'selected-loan-col':''}" style="color:#4ade80">+${cfg.salaireNet.toFixed(2)} €</td>
                                     ` : `
                                         <td style="color:#4ade80">+${cfg.salaireNet.toFixed(2)} €</td>
                                     `}
@@ -1369,17 +1486,35 @@
                                 
                                 <tr style="background:#1e293b;"><td colspan="${totalLogColspan}"><b>1. LOGEMENT & CHARGES FIXES</b></td></tr>
                                 ${cellulesLogement}
-                                <tr><td>Abonnement Internet</td>${cfg.possedeImmo ? `<td>-${cfg.internet.toFixed(2)} €</td><td>-${cfg.internet.toFixed(2)} €</td><td>-${cfg.internet.toFixed(2)} €</td><td>-${cfg.internet.toFixed(2)} €</td><td>-${cfg.internet.toFixed(2)} €</td>` : `<td>-${cfg.internet.toFixed(2)} €</td>`}</tr>
-                                <tr><td>Transport</td>${cfg.possedeImmo ? `<td>-${cfg.transport.toFixed(2)} €</td><td>-${cfg.transport.toFixed(2)} €</td><td>-${cfg.transport.toFixed(2)} €</td><td>-${cfg.transport.toFixed(2)} €</td><td>-${cfg.transport.toFixed(2)} €</td>` : `<td>-${cfg.transport.toFixed(2)} €</td>`}</tr>
+                                <tr>
+                                    <td>Abonnement Internet</td>
+                                    ${cfg.possedeImmo ? `
+                                        <td class="${dureeBilanImmo===10?'selected-loan-col':''}">-${cfg.internet.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===15?'selected-loan-col':''}">-${cfg.internet.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===20?'selected-loan-col':''}">-${cfg.internet.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===25?'selected-loan-col':''}">-${cfg.internet.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===30?'selected-loan-col':''}">-${cfg.internet.toFixed(2)} €</td>
+                                    ` : `<td>-${cfg.internet.toFixed(2)} €</td>`}
+                                </tr>
+                                <tr>
+                                    <td>Transport</td>
+                                    ${cfg.possedeImmo ? `
+                                        <td class="${dureeBilanImmo===10?'selected-loan-col':''}">-${cfg.transport.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===15?'selected-loan-col':''}">-${cfg.transport.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===20?'selected-loan-col':''}">-${cfg.transport.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===25?'selected-loan-col':''}">-${cfg.transport.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===30?'selected-loan-col':''}">-${cfg.transport.toFixed(2)} €</td>
+                                    ` : `<td>-${cfg.transport.toFixed(2)} €</td>`}
+                                </tr>
                                 
                                 <tr style="color:#38bdf8; font-weight:bold; background:rgba(56,189,248,0.05);">
                                     <td>TOTAL LOGEMENT</td>
                                     ${cfg.possedeImmo ? `
-                                        <td>${totalLog10.toFixed(2)}€</td>
-                                        <td>${totalLog15.toFixed(2)}€</td>
-                                        <td>${totalLog20.toFixed(2)}€</td>
-                                        <td>${totalLog25.toFixed(2)}€</td>
-                                        <td>${totalLog30.toFixed(2)}€</td>
+                                        <td class="${dureeBilanImmo===10?'selected-loan-col':''}">${totalLog10.toFixed(2)}€</td>
+                                        <td class="${dureeBilanImmo===15?'selected-loan-col':''}">${totalLog15.toFixed(2)}€</td>
+                                        <td class="${dureeBilanImmo===20?'selected-loan-col':''}">${totalLog20.toFixed(2)}€</td>
+                                        <td class="${dureeBilanImmo===25?'selected-loan-col':''}">${totalLog25.toFixed(2)}€</td>
+                                        <td class="${dureeBilanImmo===30?'selected-loan-col':''}">${totalLog30.toFixed(2)}€</td>
                                     ` : `
                                         <td>${totalLog20.toFixed(2)}€</td>
                                     `}
@@ -1409,13 +1544,13 @@
                                 <tr style="border-top:3px solid #38bdf8;">
                                     <td style="font-weight:bold; font-size:1.05em;">SOLDE RESTE À VIVRE NET</td>
                                     ${cfg.possedeImmo ? `
-                                        <td style="${getResteStyle(reste10)}">${reste10>=0?'+':''}${reste10.toFixed(2)} €</td>
-                                        <td style="${getResteStyle(reste15)}">${reste15>=0?'+':''}${reste15.toFixed(2)} €</td>
-                                        <td style="${getResteStyle(reste20)}">${reste20>=0?'+':''}${reste20.toFixed(2)} €</td>
-                                        <td style="${getResteStyle(reste25)}">${reste25>=0?'+':''}${reste25.toFixed(2)} €</td>
-                                        <td style="${getResteStyle(reste30)}">${reste30>=0?'+':''}${reste30.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===10?'selected-loan-col':''}" style="${getResteStyle(reste10, dureeBilanImmo===10)}">${reste10>=0?'+':''}${reste10.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===15?'selected-loan-col':''}" style="${getResteStyle(reste15, dureeBilanImmo===15)}">${reste15>=0?'+':''}${reste15.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===20?'selected-loan-col':''}" style="${getResteStyle(reste20, dureeBilanImmo===20)}">${reste20>=0?'+':''}${reste20.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===25?'selected-loan-col':''}" style="${getResteStyle(reste25, dureeBilanImmo===25)}">${reste25>=0?'+':''}${reste25.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===30?'selected-loan-col':''}" style="${getResteStyle(reste30, dureeBilanImmo===30)}">${reste30>=0?'+':''}${reste30.toFixed(2)} €</td>
                                     ` : `
-                                        <td style="${getResteStyle(reste20)}">${reste20>=0?'+':''}${reste20.toFixed(2)} €</td>
+                                        <td style="${getResteStyle(reste20, true)}">${reste20>=0?'+':''}${reste20.toFixed(2)} €</td>
                                     `}
                                 </tr>
                                 ${dernierMessageAlerte ? `
@@ -1470,12 +1605,9 @@
                 content.innerHTML = formHtml + tableauFluxHtml;
             } else if (modeActuel === 'projet') {
                 content.innerHTML = projetHtml;
-            } else if (modeActuel === 'ia') {
-                content.innerHTML = sectionIAHtml + tableauFluxHtml;
             }
         }
 
-        // Initialisation globale au chargement de la page
         afficherInterfaceAuth();
         faireSnapshotFormulaire();
         render();
