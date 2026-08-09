@@ -45,19 +45,39 @@
 </head>
 <body>
     <div class="container">
+        <!-- ESPACE CONNEXION / COMPTE -->
+        <div id="auth-banner" style="background:#0f172a; border:1px solid #334155; padding:10px 15px; border-radius:6px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <div id="auth-form-container" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; font-size:12px;">
+                <span><b>Connexion :</b></span>
+                <input type="text" id="login-pseudo" placeholder="Pseudo" style="background:#1e293b; border:1px solid #475569; color:white; padding:5px; border-radius:4px;">
+                <input type="password" id="login-password" placeholder="Mot de passe" style="background:#1e293b; border:1px solid #475569; color:white; padding:5px; border-radius:4px;">
+                <button type="button" onclick="seConnecter()" style="background:#0284c7; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer; font-weight:bold;">Se connecter</button>
+                <button type="button" onclick="afficherModalInscription()" style="background:transparent; color:#38bdf8; border:none; cursor:pointer; text-decoration:underline; font-size:11px;">Créer un compte</button>
+            </div>
+            <div id="auth-user-info" style="display:none; align-items:center; gap:10px; font-size:12px;">
+                <span>👤 Connecté en tant qu'utilisateur : <b id="current-username" style="color:#4ade80;"></b></span>
+                <button type="button" onclick="seDeconnecter()" style="background:#ef4444; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px;">Se déconnecter</button>
+            </div>
+        </div>
+
+        <!-- EN-TÊTE PROFIL & SAUVEGARDE MULTI-PROFILS -->
         <div style="background:linear-gradient(135deg, #1e293b, #0f172a); border:2px solid #38bdf8; padding:15px; border-radius:8px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px; box-shadow:0 0 15px rgba(56,189,248,0.25);">
             <div>
                 <h1 id="titre-mode" style="margin:0; font-size:1.3rem; color:#f8fafc; text-transform:uppercase;">Ressources & Dépenses Mensuelles</h1>
                 <span style="font-size:11px; color:#94a3b8;">Gérez vos flux financiers et simulez vos projets d'avenir</span>
             </div>
-            <div style="display:flex; gap:8px; align-items:center;">
-                <button type="button" onclick="sauvegarderProfilNavigateur()" style="background:#10b981; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:bold;">💾 Sauvegarder Profil</button>
-                <button type="button" onclick="chargerProfilNavigateur()" style="background:#0284c7; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:bold;">📂 Charger Profil</button>
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                <select id="select-profils" onchange="changerProfilActif(this.value)" style="background:#1e293b; color:white; border:1px solid #38bdf8; padding:8px; border-radius:4px; font-size:12px; font-weight:bold;">
+                    <option value="">-- Choisir un profil --</option>
+                </select>
+                <button type="button" onclick="sauvegarderNouveauProfil()" style="background:#10b981; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:bold;">💾 Sauvegarder Profil</button>
+                <button type="button" onclick="supprimerProfilActif()" style="background:#ef4444; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:bold;">🗑️ Supprimer</button>
             </div>
         </div>
 
         <div style="display:flex; justify-content:flex-end; align-items:center; margin-bottom: 15px;">
             <div class="nav" style="margin-bottom:0;">
+                <button id="btn-couple" onclick="changerMode('couple')">👥 Couple</button>
                 <button id="btn-proprietaire" onclick="changerMode('proprietaire')">Ressources & Dépenses</button>
                 <button id="btn-projet" onclick="changerMode('projet')">Projet & Patrimoine</button>
                 <button id="btn-ia" onclick="changerMode('ia')" style="background:#0284c7; font-weight:bold;">🤖 Smart AI</button>
@@ -70,6 +90,8 @@
     <script>
         let modeActuel = 'proprietaire';
         let dernierMessageAlerte = '';
+        let utilisateurActuel = localStorage.getItem('appBankRpgUserActif') || null;
+        let profilActifNom = '';
         
         let cfg = {
             salaireBrut: 2950,
@@ -131,38 +153,141 @@
 
         let snapshotDernierEnregistrement = null;
 
-        function sauvegarderProfilNavigateur() {
+        // --- GESTION COMPTES & AUTH ---
+        function afficherInterfaceAuth() {
+            const authForm = document.getElementById('auth-form-container');
+            const authInfo = document.getElementById('auth-user-info');
+            const userSpan = document.getElementById('current-username');
+
+            if (utilisateurActuel) {
+                authForm.style.display = 'none';
+                authInfo.style.display = 'flex';
+                userSpan.textContent = utilisateurActuel;
+                chargerListeProfilsSelect();
+            } else {
+                authForm.style.display = 'flex';
+                authInfo.style.display = 'none';
+                document.getElementById('select-profils').innerHTML = '<option value="">-- Connectez-vous --</option>';
+            }
+        }
+
+        function afficherModalInscription() {
+            let pseudo = prompt("Entrez votre pseudo pour créer un compte :");
+            if (!pseudo) return;
+            let pass = prompt("Entrez votre mot de passe :");
+            if (!pass) return;
+
+            let users = JSON.parse(localStorage.getItem('appBankRpgUsers') || '{}');
+            if (users[pseudo]) {
+                alert("⚠️ Ce pseudo existe déjà !");
+                return;
+            }
+
+            users[pseudo] = { password: pass };
+            localStorage.setItem('appBankRpgUsers', JSON.stringify(users));
+            alert("✅ Compte créé avec succès ! Vous pouvez vous connecter.");
+        }
+
+        function seConnecter() {
+            let pseudo = document.getElementById('login-pseudo').value.trim();
+            let pass = document.getElementById('login-password').value;
+
+            let users = JSON.parse(localStorage.getItem('appBankRpgUsers') || '{}');
+            if (!users[pseudo] || users[pseudo].password !== pass) {
+                alert("❌ Identifiants incorrects.");
+                return;
+            }
+
+            utilisateurActuel = pseudo;
+            localStorage.setItem('appBankRpgUserActif', pseudo);
+            document.getElementById('login-pseudo').value = '';
+            document.getElementById('login-password').value = '';
+            afficherInterfaceAuth();
+            alert(`🎉 Bienvenue ${pseudo} !`);
+        }
+
+        function seDeconnecter() {
+            utilisateurActuel = null;
+            localStorage.removeItem('appBankRpgUserActif');
+            afficherInterfaceAuth();
+            render();
+        }
+
+        // --- GESTION MULTI-PROFILS ---
+        function getStorageKeyProfils() {
+            return `appBankRpgProfils_${utilisateurActuel}`;
+        }
+
+        function chargerListeProfilsSelect() {
+            if (!utilisateurActuel) return;
+            const select = document.getElementById('select-profils');
+            let profilsObj = JSON.parse(localStorage.getItem(getStorageKeyProfils()) || '{}');
+            let optionsHtml = '<option value="">-- Charger un profil --</option>';
+            
+            for (let nomP in profilsObj) {
+                let selected = (nomP === profilActifNom) ? 'selected' : '';
+                optionsHtml += `<option value="${nomP}" ${selected}>${nomP}</option>`;
+            }
+            select.innerHTML = optionsHtml;
+        }
+
+        function sauvegarderNouveauProfil() {
+            if (!utilisateurActuel) {
+                alert("⚠️ Veuillez vous connecter pour sauvegarder un profil.");
+                return;
+            }
             synchroniserDonneesDynamiques();
-            const profilData = {
+            let nomProfil = prompt("Nommez votre profil :", profilActifNom || "Mon Profil Principal");
+            if (!nomProfil) return;
+
+            let profilsObj = JSON.parse(localStorage.getItem(getStorageKeyProfils()) || '{}');
+            profilsObj[nomProfil] = {
                 cfg,
                 abonnementsVie,
                 comptesDispo,
                 placementsBloques,
                 patrimoineSupplementaire
             };
-            localStorage.setItem('appBankRpgProfil', JSON.stringify(profilData));
-            alert("💾 Profil sauvegardé avec succès dans votre navigateur !");
+
+            localStorage.setItem(getStorageKeyProfils(), JSON.stringify(profilsObj));
+            profilActifNom = nomProfil;
+            chargerListeProfilsSelect();
+            alert(`💾 Profil "${nomProfil}" sauvegardé avec succès !`);
         }
 
-        function chargerProfilNavigateur() {
-            const savedData = localStorage.getItem('appBankRpgProfil');
-            if (!savedData) {
-                alert("⚠️ Aucun profil sauvegardé trouvé dans le navigateur.");
+        function changerProfilActif(nomProfil) {
+            if (!nomProfil || !utilisateurActuel) return;
+            let profilsObj = JSON.parse(localStorage.getItem(getStorageKeyProfils()) || '{}');
+            if (!profilsObj[nomProfil]) return;
+
+            let data = profilsObj[nomProfil];
+            cfg = data.cfg;
+            abonnementsVie = data.abonnementsVie;
+            comptesDispo = data.comptesDispo;
+            placementsBloques = data.placementsBloques;
+            patrimoineSupplementaire = data.patrimoineSupplementaire;
+            profilActifNom = nomProfil;
+            
+            faireSnapshotFormulaire();
+            render();
+            alert(`📂 Profil "${nomProfil}" chargé !`);
+        }
+
+        function supprimerProfilActif() {
+            if (!utilisateurActuel || !profilActifNom) {
+                alert("⚠️ Aucun profil actif sélectionné.");
                 return;
             }
-            try {
-                const profilData = JSON.parse(savedData);
-                cfg = profilData.cfg;
-                abonnementsVie = profilData.abonnementsVie;
-                comptesDispo = profilData.comptesDispo;
-                placementsBloques = profilData.placementsBloques;
-                patrimoineSupplementaire = profilData.patrimoineSupplementaire;
-                faireSnapshotFormulaire();
-                render();
-                alert("📂 Profil chargé avec succès !");
-            } catch(e) {
-                alert("❌ Erreur lors du chargement du profil.");
-            }
+            if (!confirm(`Voulez-vous vraiment supprimer le profil "${profilActifNom}" ?`)) return;
+
+            let profilsObj = JSON.parse(localStorage.getItem(getStorageKeyProfils()) || '{}');
+            delete profilsObj[profilActifNom];
+            localStorage.setItem(getStorageKeyProfils(), JSON.stringify(profilsObj));
+            
+            profilActifNom = '';
+            chargerListeProfilsSelect();
+            render();
+            alert("🗑️ Profil supprimé.");
         }
 
         function faireSnapshotFormulaire() {
@@ -212,6 +337,10 @@
         }
 
         function changerMode(nouveauMode) {
+            if (nouveauMode === 'couple') {
+                window.location.href = 'couple.html';
+                return;
+            }
             modeActuel = nouveauMode;
             render();
         }
@@ -573,10 +702,35 @@
                 optionsComptesDispoHtml += `<option value="${c.nom}" ${cfg.depenseFuturCompteCible === c.nom ? 'selected' : ''}>${c.nom}</option>`;
             });
 
+            let tableDispoHtml = '';
+            comptesDispo.forEach((c, index) => {
+                tableDispoHtml += `<tr class="row-dispo">
+                    <td><input type="text" value="${c.nom}" class="inp-nom" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:100%;"></td>
+                    <td><input type="number" step="any" value="${c.solde}" class="inp-solde" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:100%;"></td>
+                    <td><input type="number" step="any" value="${c.versementMensuel || 0}" class="inp-versement" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:100%;"></td>
+                    <td><input type="number" step="any" value="${c.virementExterne || 0}" class="inp-virement-externe" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:100%;"></td>
+                    <td><input type="number" step="any" value="${c.rendement}" class="inp-rendement" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:60px;"> %</td>
+                    <td><button type="button" class="del-btn" onclick="supprimerCompteDispo(${index})">Supprimer</button></td>
+                </tr>`;
+            });
+
+            let tableBloqueHtml = '';
+            placementsBloques.forEach((p, index) => {
+                tableBloqueHtml += `<tr class="row-bloque">
+                    <td><input type="text" value="${p.nom}" class="inp-nom" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:100%;"></td>
+                    <td><input type="number" step="any" value="${p.solde}" class="inp-solde" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:100%;"></td>
+                    <td><input type="number" step="any" value="${p.versementMensuel}" class="inp-versement" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:100%;"></td>
+                    <td><input type="number" step="any" value="${p.virementExterne || 0}" class="inp-virement-externe" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:100%;"></td>
+                    <td><input type="number" step="any" value="${p.rendement}" class="inp-rendement" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:60px;"> %</td>
+                    <td><button type="button" class="del-btn" onclick="supprimerPlacementBloque(${index})">Supprimer</button></td>
+                </tr>`;
+            });
+
+            let totalDispoBrut = comptesDispo.reduce((acc, c) => acc + c.solde, 0);
+            let totalDispo = totalDispoBrut - cfg.depenseFuturMontant;
+            let totalBloque = placementsBloques.reduce((acc, p) => acc + p.solde, 0);
+
             let formHtml = `
-                <div style="margin-bottom: 15px;">
-                    <a href="couple.html" class="action-btn" style="display: inline-block; text-decoration: none; background: #0284c7; text-align: center;">👥 Couple</a>
-                </div>
                 <form onsubmit="sauvegarderFormulaire(event)">
                     <div class="form-section-card">
                         <div class="form-section-title">💶 1. Salaires & Revenus Mensuels</div>
@@ -638,13 +792,37 @@
                         </div>
                     </div>
 
-                    <div class="form-section-card">
-                        <div class="form-section-title">📈 5. Épargne & Investissements (Versements Mensuels)</div>
-                        <div class="form-grid-inner">
-                            <div class="form-group"><label>Épargne PEA mensuelle (€) [Par mois]</label>${makeInput('pea', cfg.pea)}</div>
-                            <div class="form-group"><label>Épargne PER mensuelle (€) [Par mois]</label>${makeInput('per', cfg.per)}</div>
-                            <div class="form-group"><label>Épargne Bitstack mensuelle (€) [Par mois]</label>${makeInput('bitstack', cfg.bitstack)}</div>
-                            <div class="form-group"><label>Épargne LEP mensuelle (€) [Par mois]</label>${makeInput('lep', cfg.lep)}</div>
+                    <div class="form-section-card" style="border: 2px solid #38bdf8; background: #0f172a; padding: 15px; border-radius: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid #334155; padding-bottom: 10px;">
+                            <div>
+                                <h3 style="margin: 0; color: #38bdf8; font-size: 13px; text-transform: uppercase;">📈 5. Projet & Patrimoine (Comptes & Placements)</h3>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 20px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:5px;">
+                                <span style="color:#f8fafc; font-weight:bold; font-size:13px;">1. Comptes Disponibles (Total : <b style="color:#38bdf8;">${totalDispo.toFixed(2)} €</b>)</span>
+                                <button type="button" class="action-btn" onclick="ajouterCompteDispo()" style="margin:0; padding:4px 8px; font-size:11px;">+ Ajouter un compte</button>
+                            </div>
+                            <div style="overflow-x: auto;">
+                                <table id="table-dispo" style="margin:0;">
+                                    <tr><th>Nom</th><th>Solde (€)</th><th>Versement Perso (€/m)</th><th>Virement Externe (€/m)</th><th>Rendement (%)</th><th>Action</th></tr>
+                                    ${tableDispoHtml}
+                                </table>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 10px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:5px;">
+                                <span style="color:#f8fafc; font-weight:bold; font-size:13px;">2. Placements Bloqués & Projections (Total : <b style="color:#38bdf8;">${totalBloque.toFixed(2)} €</b>)</span>
+                                <button type="button" class="action-btn" onclick="ajouterPlacementBloque()" style="margin:0; padding:4px 8px; font-size:11px;">+ Ajouter un placement</button>
+                            </div>
+                            <div style="overflow-x: auto;">
+                                <table id="table-bloque" style="margin:0;">
+                                    <tr><th>Placement</th><th>Solde (€)</th><th>Versement Perso (€/m)</th><th>Virement Externe (€/m)</th><th>Rendement (%)</th><th>Action</th></tr>
+                                    ${tableBloqueHtml}
+                                </table>
+                            </div>
                         </div>
                     </div>
 
@@ -694,10 +872,6 @@
 
             let projetHtml = '';
             if (modeActuel === 'projet') {
-                let totalDispoBrut = comptesDispo.reduce((acc, c) => acc + c.solde, 0);
-                let totalDispo = totalDispoBrut - cfg.depenseFuturMontant;
-                let totalBloque = placementsBloques.reduce((acc, p) => acc + p.solde, 0);
-
                 let dateDuJourStr = "8 août 2026";
                 let anneeActuelleNum = 2026;
                 let moisActuelNum = 8;
@@ -846,30 +1020,6 @@
                     }
                 }
 
-                let tableDispoHtml = '';
-                comptesDispo.forEach((c, index) => {
-                    tableDispoHtml += `<tr class="row-dispo">
-                        <td><input type="text" value="${c.nom}" class="inp-nom" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:100%;"></td>
-                        <td><input type="number" step="any" value="${c.solde}" class="inp-solde" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:100%;"></td>
-                        <td><input type="number" step="any" value="${c.versementMensuel || 0}" class="inp-versement" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:100%;"></td>
-                        <td><input type="number" step="any" value="${c.virementExterne || 0}" class="inp-virement-externe" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:100%;"></td>
-                        <td><input type="number" step="any" value="${c.rendement}" class="inp-rendement" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:60px;"> %</td>
-                        <td><button type="button" class="del-btn" onclick="supprimerCompteDispo(${index})">Supprimer</button></td>
-                    </tr>`;
-                });
-
-                let tableBloqueHtml = '';
-                placementsBloques.forEach((p, index) => {
-                    tableBloqueHtml += `<tr class="row-bloque">
-                        <td><input type="text" value="${p.nom}" class="inp-nom" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:100%;"></td>
-                        <td><input type="number" step="any" value="${p.solde}" class="inp-solde" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:100%;"></td>
-                        <td><input type="number" step="any" value="${p.versementMensuel}" class="inp-versement" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:100%;"></td>
-                        <td><input type="number" step="any" value="${p.virementExterne || 0}" class="inp-virement-externe" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:100%;"></td>
-                        <td><input type="number" step="any" value="${p.rendement}" class="inp-rendement" style="background:#1e293b; border:1px solid #475569; color:white; padding:4px; width:60px;"> %</td>
-                        <td><button type="button" class="del-btn" onclick="supprimerPlacementBloque(${index})">Supprimer</button></td>
-                    </tr>`;
-                });
-
                 let svgWidth = 800;
                 let svgHeight = 320; 
                 let hauteurGraphPx = svgHeight - 80;
@@ -1005,53 +1155,16 @@
                     <div class="card" style="border: 2px solid #38bdf8; background: #0f172a; padding: 20px; border-radius: 8px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #334155; padding-bottom: 12px;">
                             <div>
-                                <h3 style="margin: 0; color: #38bdf8; font-size: 1.1rem; text-transform: uppercase;">📊 Estimations & Projections des Investissements</h3>
+                                <h3 style="margin: 0; color: #38bdf8; font-size: 1.1rem; text-transform: uppercase;">📊 Projections des Placements</h3>
                                 <span style="font-size: 11px; color: #94a3b8;">Suivi de la performance de vos placements à long terme</span>
                             </div>
                             <button type="button" class="action-btn" onclick="sauvegarderFormulaire(null)" style="background:#0284c7; margin:0; padding:6px 12px;">🔄 Recalculer le budget complet</button>
                         </div>
 
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 25px;">
-                            <div style="background:#1e293b; padding:15px; border-radius:6px; border-left: 4px solid #38bdf8;">
-                                <div style="font-size:11px; color:#94a3b8; text-transform: uppercase; font-weight: bold;">Capacité Épargne Mensuelle</div>
-                                <div style="font-size:20px; font-weight:bold; color:#38bdf8; margin-top:5px;">+${(totalInvest).toFixed(2)} € / mois</div>
-                            </div>
-                            <div style="background:#1e293b; padding:15px; border-radius:6px; border-left: 4px solid #4ade80;">
-                                <div style="font-size:11px; color:#94a3b8; text-transform: uppercase; font-weight: bold;">Patrimoine Global Actuel</div>
-                                <div style="font-size:20px; font-weight:bold; color:#4ade80; margin-top:5px;">${(totalDispo + totalBloque).toFixed(2)} €</div>
-                            </div>
+                        <div style="margin-top: 15px;">
+                            ${blocksProjetHtml}
                         </div>
-
-                        <div style="margin-bottom: 25px;">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:5px;">
-                                <span style="color:#f8fafc; font-weight:bold; font-size:14px;">1. Comptes Disponibles (Total : <b style="color:#38bdf8;">${totalDispo.toFixed(2)} €</b>)</span>
-                                <button type="button" class="action-btn" onclick="ajouterCompteDispo()" style="margin:0; padding:4px 8px; font-size:11px;">+ Ajouter un compte</button>
-                            </div>
-                            <div style="overflow-x: auto;">
-                                <table id="table-dispo" style="margin:0;">
-                                    <tr><th>Nom</th><th>Solde (€)</th><th>Versement Perso (€/m)</th><th>Virement Externe (€/m)</th><th>Rendement (%)</th><th>Action</th></tr>
-                                    ${tableDispoHtml}
-                                </table>
-                            </div>
-                        </div>
-
-                        <div style="margin-bottom: 20px;">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:5px;">
-                                <span style="color:#f8fafc; font-weight:bold; font-size:14px;">2. Placements Bloqués & Projections (Total : <b style="color:#38bdf8;">${totalBloque.toFixed(2)} €</b>)</span>
-                                <button type="button" class="action-btn" onclick="ajouterPlacementBloque()" style="margin:0; padding:4px 8px; font-size:11px;">+ Ajouter un placement</button>
-                            </div>
-                            <div style="overflow-x: auto;">
-                                <table id="table-bloque" style="margin:0;">
-                                    <tr><th>Placement</th><th>Solde (€)</th><th>Versement Perso (€/m)</th><th>Virement Externe (€/m)</th><th>Rendement (%)</th><th>Action</th></tr>
-                                    ${tableBloqueHtml}
-                                </table>
-                            </div>
-                            
-                            <div style="margin-top: 15px;">
-                                ${blocksProjetHtml}
-                            </div>
-                        </div>
-                    `;
+                    </div>`;
 
                 if (cfg.possedeImmo) {
                     const fraisNotaireVal = cfg.prixAnnonce * (cfg.fraisNotaireTaux / 100);
@@ -1353,9 +1466,10 @@
             }
         }
 
+        // Initialisation globale au chargement de la page
+        afficherInterfaceAuth();
         faireSnapshotFormulaire();
         render();
     </script>
 </body>
 </html>
-```[cite: 8]
