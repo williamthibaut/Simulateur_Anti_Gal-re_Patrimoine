@@ -9,7 +9,6 @@
         .container { max-width: 1400px; margin: auto; background: #1e293b; padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
         h1, h2, h3 { color: #38bdf8; }
         
-        /* Animation néon fade bleu vers rouge */
         @keyframes neonFadeBlueRed {
             0%, 100% {
                 color: #38bdf8;
@@ -27,7 +26,6 @@
             letter-spacing: 0.5px;
         }
 
-        /* Animation clignotement pour le mode tuto */
         @keyframes blinkTuto {
             0%, 100% { opacity: 1; color: #38bdf8; text-shadow: 0 0 8px #38bdf8; }
             50% { opacity: 0.3; color: #94a3b8; text-shadow: none; }
@@ -36,7 +34,6 @@
             animation: blinkTuto 1s infinite;
         }
 
-        /* Animation clignotement pour la box complète */
         @keyframes blinkCardTuto {
             0%, 100% { border-color: #38bdf8; box-shadow: 0 0 10px rgba(56,189,248,0.4); }
             50% { border-color: #f59e0b; box-shadow: 0 0 20px rgba(245,158,11,0.8); }
@@ -45,7 +42,6 @@
             animation: blinkCardTuto 1.5s infinite;
         }
         
-        /* Style des grands onglets en haut (Sticky) */
         .main-tabs-container { 
             display: flex; 
             gap: 10px; 
@@ -62,7 +58,6 @@
         .main-tabs-container button:hover { background: #475569; }
         .main-tabs-container button.active { background: #38bdf8; color: #0f172a; box-shadow: 0 0 12px rgba(56,189,248,0.4); }
 
-        /* Style des boutons Célibataire / Coloc / Couple (Bleu moins pétant) */
         .couple-tab-container { margin-bottom: 20px; width: 100%; text-align: center; display: flex; justify-content: center; gap: 10px; }
         .couple-tab-container button { padding: 8px 16px; background: #1e293b; color: #7dd3fc; border: 1px solid #0284c7; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; text-transform: uppercase; transition: all 0.2s; }
         .couple-tab-container button:hover { background: #0284c7; color: #ffffff; }
@@ -208,10 +203,6 @@
             loyerActuel: 650,
             internet: 34,
             transport: 29,
-            pea: 100,
-            per: 50,
-            bitstack: 52,
-            lep: 300,
             courses: 250,
             loisirs: 100,
             montantProjet: 0,
@@ -234,7 +225,7 @@
 
         let comptesDispo = [
             { nom: 'Compte Courant Boursorama', solde: 200, rendement: 0, versementMensuel: 0, virementExterne: 0 },
-            { nom: 'Livret A', solde: 1, rendement: 1.7, versementMensuel: 0, virementExterne: 0 },
+            { nom: 'Livret A', solde: 1, rendement: 1.7, versementMensuel: 100, virementExterne: 0 },
             { nom: 'LEP (Matelas Sécurité)', solde: 1550, rendement: 2.5, versementMensuel: 100, virementExterne: 0 }
         ];
 
@@ -539,10 +530,6 @@
                     const inpV = row.querySelector('.inp-versement');
                     if (inpV) {
                         comptesDispo[i].versementMensuel = parseFloat(inpV.value) || 0;
-                        let nomC = comptesDispo[i].nom.toUpperCase();
-                        if(nomC.includes('LEP')) {
-                            cfg.lep = comptesDispo[i].versementMensuel;
-                        }
                     }
                     const inpExt = row.querySelector('.inp-virement-externe');
                     if (inpExt) {
@@ -560,10 +547,6 @@
                     const inpV = row.querySelector('.inp-versement');
                     if (inpV) {
                         placementsBloques[i].versementMensuel = parseFloat(inpV.value) || 0;
-                        let nomP = placementsBloques[i].nom.toUpperCase();
-                        if(nomP.includes('PEA')) cfg.pea = placementsBloques[i].versementMensuel;
-                        if(nomP.includes('PER')) cfg.per = placementsBloques[i].versementMensuel;
-                        if(nomP.includes('BITSTACK') || nomP.includes('BITCOIN')) cfg.bitstack = placementsBloques[i].versementMensuel;
                     }
                     const inpExt = row.querySelector('.inp-virement-externe');
                     if (inpExt) {
@@ -635,18 +618,20 @@
             
             const logBase = mensualitePret + assuranceMensuelle + cfg.copro + cfg.taxe;
             const totalLog = (cfg.possedeImmo ? logBase : cfg.loyerActuel) + cfg.internet + cfg.transport;
-            const totalInvest = cfg.pea + cfg.per + cfg.bitstack + cfg.lep;
+            
+            let totalInvestCalcul = comptesDispo.reduce((acc, c) => acc + (c.versementMensuel || 0), 0) +
+                                   placementsBloques.reduce((acc, p) => acc + (p.versementMensuel || 0), 0);
             let totalAbosCalcul = abonnementsVie.reduce((acc, a) => acc + a.montant, 0);
             const totalVie = cfg.courses + cfg.loisirs + totalAbosCalcul;
             
-            const resteActuel = cfg.salaireNet - totalLog - totalInvest - totalVie;
+            const resteActuel = cfg.salaireNet - totalLog - totalInvestCalcul - totalVie;
             const cible = cfg.objectifResteAVivre;
             
             let difference = resteActuel - cible;
 
             if (difference < 0) {
                 let deficit = Math.abs(difference);
-                let totalDispoReductible = cfg.pea + cfg.per + cfg.bitstack + cfg.lep + cfg.loisirs + totalAbosCalcul;
+                let totalDispoReductible = totalInvestCalcul + cfg.loisirs + totalAbosCalcul;
                 
                 if (totalDispoReductible < deficit) {
                     messageOptimiseurHtml = `
@@ -656,51 +641,7 @@
                     `;
                 } else {
                     let aReduire = Math.min(deficit, Math.max(10, deficit * 0.5));
-                    
-                    if (cfg.surplusStrategie === 'loisirs') {
-                        if (cfg.loisirs >= aReduire) {
-                            cfg.loisirs -= aReduire;
-                        } else {
-                            let resteAjust = aReduire - cfg.loisirs;
-                            cfg.loisirs = 0;
-                            let invTotal = cfg.pea + cfg.per + cfg.bitstack + cfg.lep;
-                            if (invTotal > 0) {
-                                cfg.pea = Math.max(0, cfg.pea - resteAjust * (cfg.pea / invTotal));
-                                cfg.per = Math.max(0, cfg.per - resteAjust * (cfg.per / invTotal));
-                                cfg.bitstack = Math.max(0, cfg.bitstack - resteAjust * (cfg.bitstack / invTotal));
-                                cfg.lep = Math.max(0, cfg.lep - resteAjust * (cfg.lep / invTotal));
-                            } else {
-                                cfg.pea = Math.max(0, cfg.pea - resteAjust / 4);
-                                cfg.per = Math.max(0, cfg.per - resteAjust / 4);
-                                cfg.bitstack = Math.max(0, cfg.bitstack - resteAjust / 4);
-                                cfg.lep = Math.max(0, cfg.lep - resteAjust / 4);
-                            }
-                        }
-                    } else if (cfg.surplusStrategie === 'investissement') {
-                        let invTotal = cfg.pea + cfg.per + cfg.bitstack + cfg.lep;
-                        if (invTotal >= aReduire && invTotal > 0) {
-                            cfg.pea = Math.max(0, cfg.pea - aReduire * (cfg.pea / invTotal));
-                            cfg.per = Math.max(0, cfg.per - aReduire * (cfg.per / invTotal));
-                            cfg.bitstack = Math.max(0, cfg.bitstack - aReduire * (cfg.bitstack / invTotal));
-                            cfg.lep = Math.max(0, cfg.lep - aReduire * (cfg.lep / invTotal));
-                        } else {
-                            let resteAjust = aReduire - invTotal;
-                            cfg.pea = 0; cfg.per = 0; cfg.bitstack = 0; cfg.lep = 0;
-                            cfg.loisirs = Math.max(0, cfg.loisirs - resteAjust);
-                        }
-                    } else {
-                        let half = aReduire / 2;
-                        cfg.loisirs = Math.max(0, cfg.loisirs - half);
-                        let invTotal = cfg.pea + cfg.per + cfg.bitstack + cfg.lep;
-                        if (invTotal > 0) {
-                            cfg.pea = Math.max(0, cfg.pea - half * (cfg.pea / invTotal));
-                            cfg.per = Math.max(0, cfg.per - half * (cfg.per / invTotal));
-                            cfg.bitstack = Math.max(0, cfg.bitstack - half * (cfg.bitstack / invTotal));
-                            cfg.lep = Math.max(0, cfg.lep - half * (cfg.lep / invTotal));
-                        } else {
-                            cfg.loisirs = Math.max(0, cfg.loisirs - (aReduire - half));
-                        }
-                    }
+                    cfg.loisirs = Math.max(0, cfg.loisirs - aReduire);
                     messageOptimiseurHtml = `
                         <div style="background: rgba(56, 189, 248, 0.15); border: 2px solid #38bdf8; padding: 12px; border-radius: 6px; margin-top: 10px; color: #38bdf8; font-size: 12px;">
                             ⚡ <b>Optimisation en cours...</b> Ajustement appliqué.
@@ -708,74 +649,7 @@
                     `;
                 }
             } else {
-                let surplusActuel = difference;
-                
-                if (cfg.surplusStrategie === 'loisirs') {
-                    cfg.loisirs += surplusActuel;
-                } else if (cfg.surplusStrategie === 'investissement') {
-                    let ciblePER = placementsBloques.find(p => p.nom.toUpperCase().includes('PER'));
-                    let ciblePEA = placementsBloques.find(p => p.nom.toUpperCase().includes('PEA'));
-                    let cibleLEP = comptesDispo.concat(placementsBloques).find(x => x.nom.toUpperCase().includes('LEP'));
-                    let cibleLivretA = comptesDispo.concat(placementsBloques).find(x => x.nom.toUpperCase().includes('LIVRET A') || x.nom.toUpperCase().includes('LIVRET-A'));
-                    let cibleCompteCourant = comptesDispo.find(c => c.nom.toUpperCase().includes('COURANT'));
-
-                    let comptesEligibles = [];
-                    if (ciblePER) comptesEligibles.push(ciblePER);
-                    if (ciblePEA) comptesEligibles.push(ciblePEA);
-                    if (cibleLEP) comptesEligibles.push(cibleLEP);
-                    if (cibleLivretA) comptesEligibles.push(cibleLivretA);
-
-                    if (comptesEligibles.length > 0) {
-                        let part = surplusActuel / comptesEligibles.length;
-                        comptesEligibles.forEach(c => {
-                            c.versementMensuel = (c.versementMensuel || 0) + part;
-                            let nUp = c.nom.toUpperCase();
-                            if (nUp.includes('PEA')) cfg.pea += part;
-                            if (nUp.includes('PER')) cfg.per += part;
-                            if (nUp.includes('LEP')) cfg.lep += part;
-                        });
-                    } else if (cibleCompteCourant) {
-                        cibleCompteCourant.solde += surplusActuel;
-                    } else if (comptesDispo.length > 0) {
-                        comptesDispo[0].solde += surplusActuel;
-                    } else {
-                        cfg.loisirs += surplusActuel;
-                    }
-                } else {
-                    let partLoisirs = surplusActuel / 2;
-                    let partInvest = surplusActuel / 2;
-                    cfg.loisirs += partLoisirs;
-
-                    let ciblePER = placementsBloques.find(p => p.nom.toUpperCase().includes('PER'));
-                    let ciblePEA = placementsBloques.find(p => p.nom.toUpperCase().includes('PEA'));
-                    let cibleLEP = comptesDispo.concat(placementsBloques).find(x => x.nom.toUpperCase().includes('LEP'));
-                    let cibleLivretA = comptesDispo.concat(placementsBloques).find(x => x.nom.toUpperCase().includes('LIVRET A') || x.nom.toUpperCase().includes('LIVRET-A'));
-                    let cibleCompteCourant = comptesDispo.find(c => c.nom.toUpperCase().includes('COURANT'));
-
-                    let comptesEligibles = [];
-                    if (ciblePER) comptesEligibles.push(ciblePER);
-                    if (ciblePEA) comptesEligibles.push(ciblePEA);
-                    if (cibleLEP) comptesEligibles.push(cibleLEP);
-                    if (cibleLivretA) comptesEligibles.push(cibleLivretA);
-
-                    if (comptesEligibles.length > 0) {
-                        let part = partInvest / comptesEligibles.length;
-                        comptesEligibles.forEach(c => {
-                            c.versementMensuel = (c.versementMensuel || 0) + part;
-                            let nUp = c.nom.toUpperCase();
-                            if (nUp.includes('PEA')) cfg.pea += part;
-                            if (nUp.includes('PER')) cfg.per += part;
-                            if (nUp.includes('LEP')) cfg.lep += part;
-                        });
-                    } else if (cibleCompteCourant) {
-                        cibleCompteCourant.solde += partInvest;
-                    } else if (comptesDispo.length > 0) {
-                        comptesDispo[0].solde += partInvest;
-                    } else {
-                        cfg.loisirs += partInvest;
-                    }
-                }
-
+                cfg.loisirs += difference;
                 messageOptimiseurHtml = `
                     <div style="background: rgba(74, 222, 128, 0.15); border: 2px solid #4ade80; padding: 12px; border-radius: 6px; margin-top: 10px; color: #4ade80; font-size: 12px;">
                         🎯 <b>Objectif déjà atteint !</b> Surplus réparti selon votre stratégie.
@@ -842,10 +716,8 @@
                 cfg.salaireBrut = 1800;
                 cfg.primeAnciennete = 0;
                 cfg.primeAnnuelle = 0;
-                cfg.pea = 0;
-                cfg.per = 0;
-                cfg.bitstack = 0;
-                cfg.lep = 0;
+                comptesDispo.forEach(c => c.versementMensuel = 0);
+                placementsBloques.forEach(p => p.versementMensuel = 0);
                 
                 if (comptesDispo.length > 0) {
                     comptesDispo[0].solde = 1200;
@@ -911,15 +783,16 @@
             const totalLog25 = (cfg.possedeImmo ? logBase25 : cfg.loyerActuel) + cfg.internet + cfg.transport;
             const totalLog30 = (cfg.possedeImmo ? logBase30 : cfg.loyerActuel) + cfg.internet + cfg.transport;
             
-            const totalInvest = cfg.pea + cfg.per + cfg.bitstack + cfg.lep;
+            let totalInvestMensuel = comptesDispo.reduce((acc, c) => acc + (c.versementMensuel || 0), 0) +
+                                     placementsBloques.reduce((acc, p) => acc + (p.versementMensuel || 0), 0);
             let totalAbosCalcul = abonnementsVie.reduce((acc, a) => acc + a.montant, 0);
             const totalVie = cfg.courses + cfg.loisirs + totalAbosCalcul;
             
-            const reste10 = cfg.salaireNet - totalLog10 - totalInvest - totalVie;
-            const reste15 = cfg.salaireNet - totalLog15 - totalInvest - totalVie;
-            const reste20 = cfg.salaireNet - totalLog20 - totalInvest - totalVie;
-            const reste25 = cfg.salaireNet - totalLog25 - totalInvest - totalVie;
-            const reste30 = cfg.salaireNet - totalLog30 - totalInvest - totalVie;
+            const reste10 = cfg.salaireNet - totalLog10 - totalInvestMensuel - totalVie;
+            const reste15 = cfg.salaireNet - totalLog15 - totalInvestMensuel - totalVie;
+            const reste20 = cfg.salaireNet - totalLog20 - totalInvestMensuel - totalVie;
+            const reste25 = cfg.salaireNet - totalLog25 - totalInvestMensuel - totalVie;
+            const reste30 = cfg.salaireNet - totalLog30 - totalInvestMensuel - totalVie;
 
             const makeInput = (name, val) => `
                 <div class="input-wrapper">
@@ -1567,6 +1440,41 @@
                 }
             });
 
+            // Génération dynamique des lignes pour les comptes disponibles et placements bloqués
+            let fluxComptesDispoHtml = '';
+            comptesDispo.forEach(c => {
+                let v = c.versementMensuel || 0;
+                if (cfg.possedeImmo) {
+                    fluxComptesDispoHtml += `<tr>
+                        <td>${c.nom}</td>
+                        <td class="${dureeBilanImmo===10?'selected-loan-col':''}">-${v.toFixed(2)} €</td>
+                        <td class="${dureeBilanImmo===15?'selected-loan-col':''}">-${v.toFixed(2)} €</td>
+                        <td class="${dureeBilanImmo===20?'selected-loan-col':''}">-${v.toFixed(2)} €</td>
+                        <td class="${dureeBilanImmo===25?'selected-loan-col':''}">-${v.toFixed(2)} €</td>
+                        <td class="${dureeBilanImmo===30?'selected-loan-col':''}">-${v.toFixed(2)} €</td>
+                    </tr>`;
+                } else {
+                    fluxComptesDispoHtml += `<tr><td>${c.nom}</td><td>-${v.toFixed(2)} €</td></tr>`;
+                }
+            });
+
+            let fluxPlacementsBloquesHtml = '';
+            placementsBloques.forEach(p => {
+                let v = p.versementMensuel || 0;
+                if (cfg.possedeImmo) {
+                    fluxPlacementsBloquesHtml += `<tr>
+                        <td>${p.nom}</td>
+                        <td class="${dureeBilanImmo===10?'selected-loan-col':''}">-${v.toFixed(2)} €</td>
+                        <td class="${dureeBilanImmo===15?'selected-loan-col':''}">-${v.toFixed(2)} €</td>
+                        <td class="${dureeBilanImmo===20?'selected-loan-col':''}">-${v.toFixed(2)} €</td>
+                        <td class="${dureeBilanImmo===25?'selected-loan-col':''}">-${v.toFixed(2)} €</td>
+                        <td class="${dureeBilanImmo===30?'selected-loan-col':''}">-${v.toFixed(2)} €</td>
+                    </tr>`;
+                } else {
+                    fluxPlacementsBloquesHtml += `<tr><td>${p.nom}</td><td>-${v.toFixed(2)} €</td></tr>`;
+                }
+            });
+
             const getResteStyle = (val, isSelected) => {
                 let isOk = val >= 0;
                 let bg = isOk ? 'rgba(74, 222, 128, 0.15)' : 'rgba(239, 68, 68, 0.15)';
@@ -1620,46 +1528,6 @@
                 </tr>
             ` : `
                 <tr><td>Loyer Actuel</td><td>-${cfg.loyerActuel.toFixed(2)} €</td></tr>
-            `;
-
-            let colonnesInvestHtml = cfg.possedeImmo ? `
-                <td class="${dureeBilanImmo===10?'selected-loan-col':''}">-${cfg.pea.toFixed(2)} €</td>
-                <td class="${dureeBilanImmo===15?'selected-loan-col':''}">-${cfg.pea.toFixed(2)} €</td>
-                <td class="${dureeBilanImmo===20?'selected-loan-col':''}">-${cfg.pea.toFixed(2)} €</td>
-                <td class="${dureeBilanImmo===25?'selected-loan-col':''}">-${cfg.pea.toFixed(2)} €</td>
-                <td class="${dureeBilanImmo===30?'selected-loan-col':''}">-${cfg.pea.toFixed(2)} €</td>
-            ` : `
-                <td>-${cfg.pea.toFixed(2)} €</td>
-            `;
-
-            let colonnesPerHtml = cfg.possedeImmo ? `
-                <td class="${dureeBilanImmo===10?'selected-loan-col':''}">-${cfg.per.toFixed(2)} €</td>
-                <td class="${dureeBilanImmo===15?'selected-loan-col':''}">-${cfg.per.toFixed(2)} €</td>
-                <td class="${dureeBilanImmo===20?'selected-loan-col':''}">-${cfg.per.toFixed(2)} €</td>
-                <td class="${dureeBilanImmo===25?'selected-loan-col':''}">-${cfg.per.toFixed(2)} €</td>
-                <td class="${dureeBilanImmo===30?'selected-loan-col':''}">-${cfg.per.toFixed(2)} €</td>
-            ` : `
-                <td>-${cfg.per.toFixed(2)} €</td>
-            `;
-
-            let colonnesBitstackHtml = cfg.possedeImmo ? `
-                <td class="${dureeBilanImmo===10?'selected-loan-col':''}">-${cfg.bitstack.toFixed(2)} €</td>
-                <td class="${dureeBilanImmo===15?'selected-loan-col':''}">-${cfg.bitstack.toFixed(2)} €</td>
-                <td class="${dureeBilanImmo===20?'selected-loan-col':''}">-${cfg.bitstack.toFixed(2)} €</td>
-                <td class="${dureeBilanImmo===25?'selected-loan-col':''}">-${cfg.bitstack.toFixed(2)} €</td>
-                <td class="${dureeBilanImmo===30?'selected-loan-col':''}">-${cfg.bitstack.toFixed(2)} €</td>
-            ` : `
-                <td>-${cfg.bitstack.toFixed(2)} €</td>
-            `;
-
-            let colonnesLepHtml = cfg.possedeImmo ? `
-                <td class="${dureeBilanImmo===10?'selected-loan-col':''}">-${cfg.lep.toFixed(2)} €</td>
-                <td class="${dureeBilanImmo===15?'selected-loan-col':''}">-${cfg.lep.toFixed(2)} €</td>
-                <td class="${dureeBilanImmo===20?'selected-loan-col':''}">-${cfg.lep.toFixed(2)} €</td>
-                <td class="${dureeBilanImmo===25?'selected-loan-col':''}">-${cfg.lep.toFixed(2)} €</td>
-                <td class="${dureeBilanImmo===30?'selected-loan-col':''}">-${cfg.lep.toFixed(2)} €</td>
-            ` : `
-                <td>-${cfg.lep.toFixed(2)} €</td>
             `;
 
             let colonnesCoursesHtml = cfg.possedeImmo ? `
@@ -1740,22 +1608,8 @@
                                         <td>-${cfg.transport.toFixed(2)} €</td>
                                     `}
                                 </tr>
-                                <tr>
-                                    <td>PEA (Actions Mondiales / ETF)</td>
-                                    ${colonnesInvestHtml}
-                                </tr>
-                                <tr>
-                                    <td>PER (Plan Épargne Retraite)</td>
-                                    ${colonnesPerHtml}
-                                </tr>
-                                <tr>
-                                    <td>Bitstack / Bitcoin</td>
-                                    ${colonnesBitstackHtml}
-                                </tr>
-                                <tr>
-                                    <td>LEP (Matelas Sécurité)</td>
-                                    ${colonnesLepHtml}
-                                </tr>
+                                ${fluxComptesDispoHtml}
+                                ${fluxPlacementsBloquesHtml}
                                 <tr>
                                     <td>Courses / Alimentation</td>
                                     ${colonnesCoursesHtml}
