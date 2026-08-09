@@ -35,6 +35,15 @@
         .tuto-blink {
             animation: blinkTuto 1s infinite;
         }
+
+        /* Animation clignotement pour la box complète */
+        @keyframes blinkCardTuto {
+            0%, 100% { border-color: #38bdf8; box-shadow: 0 0 10px rgba(56,189,248,0.4); }
+            50% { border-color: #f59e0b; box-shadow: 0 0 20px rgba(245,158,11,0.8); }
+        }
+        .card-tuto-blink {
+            animation: blinkCardTuto 1.5s infinite;
+        }
         
         /* Style des grands onglets en haut (Sticky) */
         .main-tabs-container { 
@@ -69,6 +78,8 @@
 
         .form-section-card { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 15px; margin-bottom: 15px; transition: opacity 0.3s ease, filter 0.3s ease; }
         .form-section-card.disabled-section { opacity: 0.45; }
+        /* Modification pour que le header du projet immo reste totalement cliquable et coloré même quand la box est grisée */
+        .form-section-card.disabled-section .form-section-title { opacity: 1 !important; pointer-events: auto !important; }
         .form-section-card.disabled-section input:not([type="checkbox"]), 
         .form-section-card.disabled-section select,
         .form-section-card.disabled-section button:not(.immo-toggle-master-btn) { pointer-events: none; opacity: 0.6; }
@@ -111,7 +122,7 @@
                 <button type="button" onclick="seDeconnecter()" style="background:#ef4444; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px;">Se déconnecter</button>
             </div>
             
-            <!-- SECTION DROITE DE LA LIGNE : MODE TUTO + TITRE NEON -->
+            <!-- SECTION DROITE DE LA LIGNE : TITRE NEON SEUL -->
             <div style="display:flex; align-items:center; gap:15px; margin-left:auto;">
                 <div class="neon-title">Simulateur_AntiGalère_V0.1.0</div>
             </div>
@@ -127,14 +138,19 @@
             <button id="btn-coloc" onclick="changerStatutFoyer('coloc')">Colocataires (WIP)</button>
             <button id="btn-couple" onclick="changerStatutFoyer('couple')">Couple (WIP)</button>
         </div>
-        <label style="font-size:12px; color:#38bdf8; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:5px;">
-                    <input type="checkbox" id="chk-mode-tuto" onchange="render()" style="cursor:pointer; width:15px; height:15px; accent-color:#38bdf8;"> Mode Tuto
-                </label>
-        <!-- EN-TÊTE PROFIL & SAUVEGARDE MULTI-PROFILS -->
+
+        <!-- EN-TÊTE PROFIL & SAUVEGARDE MULTI-PROFILS + CHECKBOX MODE TUTO DÉPLACÉE -->
         <div style="background:linear-gradient(135deg, #1e293b, #0f172a); border:2px solid #38bdf8; padding:15px; border-radius:8px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px; box-shadow:0 0 15px rgba(56,189,248,0.25);">
             <div>
                 <h1 id="titre-mode" style="margin:0; font-size:1.3rem; color:#f8fafc; text-transform:uppercase;">Ressources & Dépenses Mensuelles</h1>
                 <span style="font-size:11px; color:#94a3b8;">Gérez vos flux financiers et simulez vos projets d'avenir</span>
+                
+                <!-- CHECKBOX MODE TUTO DÉPLACÉE ICI -->
+                <div style="margin-top: 10px;">
+                    <label style="font-size:12px; color:#38bdf8; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:5px; background: rgba(56,189,248,0.1); padding: 4px 8px; border-radius: 4px; border: 1px solid #38bdf8;">
+                        <input type="checkbox" id="chk-mode-tuto" onchange="render()" style="cursor:pointer; width:15px; height:15px; accent-color:#38bdf8;"> Mode Tuto
+                    </label>
+                </div>
             </div>
             <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
                 <select id="select-profils" onchange="changerProfilActif(this.value)" style="background:#1e293b; color:white; border:1px solid #38bdf8; padding:8px; border-radius:4px; font-size:12px; font-weight:bold;">
@@ -189,7 +205,11 @@
             possedeImmo: true,
             depenseFuturNom: 'Vacances futur',
             depenseFuturMontant: 0,
-            depenseFuturCompteCible: 'LEP (Matelas Sécurité)'
+            depenseFuturCompteCible: 'LEP (Matelas Sécurité)',
+            
+            // Paramètres Autoentrepreneur (Micro-entreprise)
+            caMicro: 0,
+            typeMicro: 'services' // 'services' (BNC 34%) ou 'vente' (BIC 71%)
         };
 
         let abonnementsVie = [
@@ -464,6 +484,34 @@
             render();
         }
 
+        // Fonction de calcul de l'impôt sur le revenu français par tranches (barème progressif)
+        function calculerImpotRevenu(revenuNetImposable) {
+            if (revenuNetImposable <= 0) return 0;
+            let impot = 0;
+            // Tranche 1 : jusqu'à 11600 € à 0%
+            if (revenuNetImposable > 11600) {
+                // Tranche 2 : de 11 601 € à 29 579 € à 11%
+                let t2 = Math.min(29579, revenuNetImposable) - 11600;
+                impot += t2 * 0.11;
+            }
+            if (revenuNetImposable > 29579) {
+                // Tranche 3 : de 29 580 € à 84 577 € à 30%
+                let t3 = Math.min(84577, revenuNetImposable) - 29579;
+                impot += t3 * 0.30;
+            }
+            if (revenuNetImposable > 84577) {
+                // Tranche 4 : de 84 578 € à 181 917 € à 41%
+                let t4 = Math.min(181917, revenuNetImposable) - 84577;
+                impot += t4 * 0.41;
+            }
+            if (revenuNetImposable > 181917) {
+                // Tranche 5 : au-delà de 181 917 € à 45%
+                let t5 = revenuNetImposable - 181917;
+                impot += t5 * 0.45;
+            }
+            return impot;
+        }
+
         function synchroniserDonneesDynamiques() {
             const rowsAbo = document.querySelectorAll('#table-abos tr.row-abo');
             rowsAbo.forEach((row, i) => {
@@ -558,6 +606,13 @@
                 dureeBilanImmo = parseInt(selDureeImmoBilan.value) || dureeBilanImmo;
                 cfg.optionCibleOptimisation = String(dureeBilanImmo);
             }
+
+            // Synchronisation autoentrepreneur
+            const inpCaMicro = document.getElementById('inp-ca-micro');
+            if (inpCaMicro) cfg.caMicro = parseFloat(inpCaMicro.value) || 0;
+
+            const selTypeMicro = document.getElementById('sel-type-micro');
+            if (selTypeMicro) cfg.typeMicro = selTypeMicro.value;
         }
 
         function sauvegarderFormulaire(event) {
@@ -724,13 +779,47 @@
         }
 
         function render() {
-            if (cfg.salaireNet === 0) {
-                const brutTotal = cfg.salaireBrut + cfg.primeAnciennete;
-                cfg.salaireNet = (brutTotal * 0.78) * (1 - (cfg.tauxPas / 100));
-            }
-
             // Vérification de l'état de la case mode tuto
             const modeTutoActif = document.getElementById('chk-mode-tuto') ? document.getElementById('chk-mode-tuto').checked : false;
+            
+            // Si le mode tuto vient d'être activé pour la première fois, on initialise les valeurs par défaut du tuto
+            // On utilise une variable globale ou de suivi si besoin, mais ici on s'assure que si on coche, cela s'applique uniquement à l'activation
+            if (window._dernierModeTuto !== modeTutoActif) {
+                if (modeTutoActif) {
+                    cfg.salaireBrut = 1800;
+                    cfg.primeAnciennete = 0;
+                    cfg.pea = 0;
+                    cfg.per = 0;
+                    cfg.bitstack = 0;
+                    cfg.lep = 0;
+                    
+                    if (comptesDispo.length > 0) {
+                        comptesDispo[0].solde = 1200;
+                    }
+                    for (let i = 1; i < comptesDispo.length; i++) {
+                        comptesDispo[i].solde = 0;
+                    }
+                    placementsBloques.forEach(p => p.solde = 0);
+                    cfg.possedeImmo = false;
+                }
+                window._dernierModeTuto = modeTutoActif;
+            }
+
+            const brutTotal = cfg.salaireBrut + cfg.primeAnciennete;
+            const netAvantPas = brutTotal * 0.78; 
+            cfg.salaireNet = netAvantPas * (1 - (cfg.tauxPas / 100));
+
+            // Calcul des impôts annuels (Salaires net imposable avec abattement de 10% + micro-entreprise)
+            let salaireAnnuelNetImmatériel = (brutTotal * 12) * 0.78; // approximation nette annuelle brute avant IR
+            let abattementSalarie = salaireAnnuelNetImmatériel * 0.10;
+            let revenuImposableSalaires = Math.max(0, salaireAnnuelNetImmatériel - abattementSalarie);
+
+            let abattementMicro = cfg.typeMicro === 'services' ? 0.34 : 0.71;
+            let revenuImposableMicro = Math.max(0, cfg.caMicro * (1 - abattementMicro));
+
+            let revenuNetImposableTotal = revenuImposableSalaires + revenuImposableMicro;
+            let impotAnnuelRevenu = calculerImpotRevenu(revenuNetImposableTotal);
+
             const tutoClass = modeTutoActif ? 'tuto-blink' : '';
 
             // Gestion propre des états actifs des onglets principaux
@@ -830,7 +919,19 @@
             let totalDispo = totalDispoBrut - cfg.depenseFuturMontant;
             let totalBloque = placementsBloques.reduce((acc, p) => acc + p.solde, 0);
 
+            let messageTutoHtml = '';
+            if (modeTutoActif) {
+                messageTutoHtml = `
+                    <div style="background: #fffbeb; color: #b45309; border: 2px solid #f59e0b; padding: 12px 15px; border-radius: 6px; margin-bottom: 15px; font-weight: bold; font-size: 13px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                        💡 Recommandation : veuillez d'abord remplir les cases clignotant en bleu pour définir votre situation actuelle.
+                    </div>
+                `;
+            }
+
+            let boxProjetPatrimoineClass = modeTutoActif ? 'form-section-card card-tuto-blink' : 'form-section-card';
+
             let formHtml = `
+                ${messageTutoHtml}
                 <form onsubmit="sauvegarderFormulaire(event)">
                     <div class="form-section-card">
                         <div class="form-section-title">💶 1. Salaires & Revenus Mensuels</div>
@@ -839,6 +940,24 @@
                             <div class="form-group"><label>Prime d'ancienneté (€)</label>${makeInput('primeAnciennete', cfg.primeAnciennete)}</div>
                             <div class="form-group"><label>Prélèvement à la source (%)</label>${makeInput('tauxPas', cfg.tauxPas)}</div>
                             <div class="form-group"><label class="${tutoClass}">Salaire Net Réel (Calculé)</label><div class="input-wrapper"><input type="number" step="any" name="salaireNet" value="${cfg.salaireNet.toFixed(2)}" readonly style="color:#4ade80;"></div></div>
+                        </div>
+                        <button type="submit" class="action-btn">Valider</button>
+                    </div>
+
+                    <!-- BOX AUTOENTREPRENEUR / MICRO-ENTREPRISE -->
+                    <div class="form-section-card">
+                        <div class="form-section-title">💼 1. bis - Activité Autoentrepreneur (Micro-entreprise)</div>
+                        <div class="form-grid-inner">
+                            <div class="form-group"><label>Chiffre d'Affaires Annuel (€)</label>${makeInput('caMicro', cfg.caMicro)}</div>
+                            <div class="form-group">
+                                <label>Type d'activité</label>
+                                <div class="input-wrapper">
+                                    <select id="sel-type-micro" onchange="synchroniserDonneesDynamiques()" style="background:transparent; border:none; color:white; padding:6px; width:100%; outline:none; box-sizing:border-box;">
+                                        <option value="services" ${cfg.typeMicro==='services'?'selected':''}>Services (Abattement 34% - BNC)</option>
+                                        <option value="vente" ${cfg.typeMicro==='vente'?'selected':''}>Vente / Achat-Vente (Abattement 71% - BIC)</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                         <button type="submit" class="action-btn">Valider</button>
                     </div>
@@ -887,7 +1006,11 @@
                     <div class="form-section-card">
                         <div class="form-section-title">🛒 4. Charges Courantes & Vie Quotidienne</div>
                         <div class="form-grid-inner">
-                            <div class="form-group"><label class="${tutoClass}">Loyer Actuel (€) (Si non propriétaire)</label>${makeInput('loyerActuel', cfg.loyerActuel)}</div>
+                            <div class="form-group">
+                                <label class="${tutoClass}">Loyer Actuel (€) (Si non propriétaire)</label>
+                                ${makeInput('loyerActuel', cfg.loyerActuel)}
+                                <span style="font-size:10px; color:#94a3b8; font-style:italic; display:block; margin-top:3px;">Entrez votre loyer avec les charges (électricité + gaz en moyenne sur l'année)</span>
+                            </div>
                             <div class="form-group"><label class="${tutoClass}">Abonnement Internet (€)</label>${makeInput('internet', cfg.internet)}</div>
                             <div class="form-group"><label class="${tutoClass}">Transport (€)</label>${makeInput('transport', cfg.transport)}</div>
                             <div class="form-group"><label class="${tutoClass}">Courses / Alimentation (€)</label>${makeInput('courses', cfg.courses)}</div>
@@ -896,12 +1019,17 @@
                         <button type="submit" class="action-btn">Valider</button>
                     </div>
 
-                    <div class="form-section-card" style="border: 2px solid #38bdf8; background: #0f172a; padding: 15px; border-radius: 8px;">
+                    <div class="${boxProjetPatrimoineClass}" style="border: 2px solid #38bdf8; background: #0f172a; padding: 15px; border-radius: 8px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid #334155; padding-bottom: 10px;">
                             <div>
                                 <h3 style="margin: 0; color: #38bdf8; font-size: 13px; text-transform: uppercase;">📈 5. Projet & Patrimoine (Comptes & Placements)</h3>
                             </div>
                             <button type="submit" class="action-btn">Valider</button>
+                        </div>
+
+                        <!-- PETITE FENÊTRE BLANCHE/JAUNE RECOMMANDATION -->
+                        <div style="background: #fffbeb; color: #b45309; border: 1px solid #f59e0b; padding: 8px 12px; border-radius: 6px; margin-bottom: 15px; font-size: 12px; font-weight: bold;">
+                            Renseignez ici les montants de vos comptes actuellement ainsi que les éventuels versements mensuels que vous y effectuez.
                         </div>
 
                         <div style="margin-bottom: 20px;">
@@ -964,6 +1092,15 @@
             });
             formHtml += `</table></div>
 
+                    <!-- BLOC AFFICHAGE IMPÔTS ANNUELS EN BAS DE LA PAGE RESSOURCES & DÉPENSES -->
+                    <div style="background:#1e293b; border:1px solid #38bdf8; border-radius:6px; padding:15px; margin-bottom:15px; text-align:center;">
+                        <h3 style="margin-top:0; color:#38bdf8; font-size:13px; text-transform:uppercase;">🏛️ Estimation des Impôts Annuels</h3>
+                        <div style="display:flex; justify-content:around; gap:15px; flex-wrap:wrap; font-size:13px; margin-top:8px;">
+                            <div>Revenu Net Imposable Total : <b style="color:#f8fafc;">${revenuNetImposableTotal.toFixed(2)} €</b></div>
+                            <div>Impôt sur le Revenu Estimé (Barème par tranches) : <b style="color:#f87171;">${impotAnnuelRevenu.toFixed(2)} € / an</b> (~${(impotAnnuelRevenu/12).toFixed(2)} €/mois)</div>
+                        </div>
+                    </div>
+
                     <button type="submit" class="action-btn">Mettre à jour le budget</button>
                 </form>
             `;
@@ -1003,7 +1140,11 @@
                 }
 
                 let totalPatrimoineSupp = patrimoineSupplementaire.reduce((acc, item) => acc + item.valeur, 0);
-                let patrimoineTotalInstantT = estimationReventeInstantT + totalDispo + totalBloque + totalPatrimoineSupp;
+                
+                // Intégration des impôts annuels (impôt sur le revenu + taxe foncière si propriétaire) dans le patrimoine final et les flux
+                // Note : On prend en compte la taxe foncière annuelle (cfg.taxe) mais sans la compter deux fois car elle fait déjà partie des charges immo mensuelles/annuelles. 
+                // Pour refléter l'impact global sur le patrimoine ou la trésorerie de fin d'année, on peut soustraire l'impôt annuel sur le revenu global de la trésorerie/patrimoine.
+                let patrimoineTotalInstantT = estimationReventeInstantT + totalDispo + totalBloque + totalPatrimoineSupp - impotAnnuelRevenu;
 
                 const calculerFuturCompte = (soldeActuel, versementPerso, versementExterne, tauxAnnuel, annees) => {
                     let r = tauxAnnuel / 100 / 12;
@@ -1056,8 +1197,8 @@
                         sommeGlobalAn += calculerFuturCompte(s, p.versementMensuel || 0, p.virementExterne || 0, p.rendement, an);
                         sommeVerseGlobalAn += s + ((p.versementMensuel || 0) + (p.virementExterne || 0)) * an * 12;
                     });
-                    sommeGlobalAn += totalPatrimoineSupp;
-                    sommeVerseGlobalAn += totalPatrimoineSupp;
+                    sommeGlobalAn += totalPatrimoineSupp - impotAnnuelRevenu;
+                    sommeVerseGlobalAn += totalPatrimoineSupp - impotAnnuelRevenu;
                     
                     graphiquePointsInvest.push(sommeGlobalAn);
                     graphiquePointsVerse.push(sommeVerseGlobalAn);
@@ -1077,7 +1218,7 @@
 
                 let totalAbosActuels = abonnementsVie.reduce((acc, a) => acc + a.montant, 0);
                 let totalChargesVieActuelles = cfg.loyerActuel + cfg.internet + cfg.transport + cfg.courses + cfg.loisirs + totalAbosActuels;
-                let capaciteEpargneActuelleLocataire = cfg.salaireNet - totalChargesVieActuelles;
+                let capaciteEpargneActuelleLocataire = cfg.salaireNet - totalChargesVieActuelles - (impotAnnuelRevenu / 12);
 
                 let objectifApport = cfg.apport;
                 
@@ -1192,7 +1333,7 @@
                             ${patrimoineTotalInstantT.toFixed(2)} €
                         </div>
                         <div style="font-size: 12px; color: #94a3b8; text-align: center; margin-bottom: 15px;">
-                            Cumul réel actuel de vos comptes disponibles ${cfg.depenseFuturMontant > 0 ? `(déduction faite de ${cfg.depenseFuturMontant}€ pour ${cfg.depenseFuturNom} sur ${cfg.depenseFuturCompteCible})` : ''}, placements bloqués et patrimoine supplémentaire.
+                            Cumul réel actuel de vos comptes disponibles ${cfg.depenseFuturMontant > 0 ? `(déduction faite de ${cfg.depenseFuturMontant}€ pour ${cfg.depenseFuturNom} sur ${cfg.depenseFuturCompteCible})` : ''}, placements bloqués et patrimoine supplémentaire (déduction faite des impôts annuels estimés).
                         </div>
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; font-size: 12px; margin-bottom: 15px;">
                             <div style="background:#0f172a; padding:10px; border-radius:6px;">Valeur Nette Immo / Revente : <b style="color:#38bdf8;">${estimationReventeInstantT.toFixed(2)} €</b></div>
@@ -1226,7 +1367,7 @@
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; font-size: 13px;">
                             <div style="background:#1e293b; padding:12px; border-radius:6px;">Objectif d'Apport Cible : <br><b style="color:#38bdf8; font-size:1.2em;">${objectifApport.toFixed(2)} €</b></div>
                             <div style="background:#1e293b; padding:12px; border-radius:6px;">Épargne Disponible Actuelle : <br><b style="color:#4ade80; font-size:1.2em;">${epargneDispoActuelle.toFixed(2)} €</b></div>
-                            <div style="background:#1e293b; padding:12px; border-radius:6px;">Capacité d'épargne mensuelle : <br><b style="color:#38bdf8; font-size:1.2em;">${capaciteEpargneActuelleLocataire.toFixed(2)} € / mois</b></div>
+                            <div style="background:#1e293b; padding:12px; border-radius:6px;">Capacité d'épargne mensuelle (nette d'impôts) : <br><b style="color:#38bdf8; font-size:1.2em;">${capaciteEpargneActuelleLocataire.toFixed(2)} € / mois</b></div>
                             
                             <div style="background:#1e293b; padding:14px; border-radius:6px; grid-column: 1 / -1; border: 1px solid #38bdf8;">
                                 <b style="color:#38bdf8; font-size:1.1em; display:block; margin-bottom:6px;">📌 Scénario 1 : Piocher dans les investissements bloqués</b>
@@ -1418,7 +1559,7 @@
                     <td class="${dureeBilanImmo===30?'selected-loan-col':''}">-${assuranceMensuelle.toFixed(2)} €</td>
                 </tr>
                 <tr>
-                    <td class="${tutoClass}">Charges de Copropriété</td>
+                    <td>Charges de Copropriété</td>
                     <td class="${dureeBilanImmo===10?'selected-loan-col':''}">-${cfg.copro.toFixed(2)} €</td>
                     <td class="${dureeBilanImmo===15?'selected-loan-col':''}">-${cfg.copro.toFixed(2)} €</td>
                     <td class="${dureeBilanImmo===20?'selected-loan-col':''}">-${cfg.copro.toFixed(2)} €</td>
@@ -1426,7 +1567,7 @@
                     <td class="${dureeBilanImmo===30?'selected-loan-col':''}">-${cfg.copro.toFixed(2)} €</td>
                 </tr>
                 <tr>
-                    <td class="${tutoClass}">Taxe Foncière</td>
+                    <td>Taxe Foncière</td>
                     <td class="${dureeBilanImmo===10?'selected-loan-col':''}">-${cfg.taxe.toFixed(2)} €</td>
                     <td class="${dureeBilanImmo===15?'selected-loan-col':''}">-${cfg.taxe.toFixed(2)} €</td>
                     <td class="${dureeBilanImmo===20?'selected-loan-col':''}">-${cfg.taxe.toFixed(2)} €</td>
@@ -1434,7 +1575,7 @@
                     <td class="${dureeBilanImmo===30?'selected-loan-col':''}">-${cfg.taxe.toFixed(2)} €</td>
                 </tr>
             ` : `
-                <tr><td class="${tutoClass}">Loyer Actuel</td><td>-${cfg.loyerActuel.toFixed(2)} €</td></tr>
+                <tr><td>Loyer Actuel</td><td>-${cfg.loyerActuel.toFixed(2)} €</td></tr>
             `;
 
             let colonnesInvestHtml = cfg.possedeImmo ? `
@@ -1521,7 +1662,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td class="${tutoClass}"><b>SALAIRE NET MENSUEL</b></td>
+                                    <td><b>SALAIRE NET MENSUEL</b></td>
                                     ${cfg.possedeImmo ? `
                                         <td class="${dureeBilanImmo===10?'selected-loan-col':''}" style="color:#4ade80">+${cfg.salaireNet.toFixed(2)} €</td>
                                         <td class="${dureeBilanImmo===15?'selected-loan-col':''}" style="color:#4ade80">+${cfg.salaireNet.toFixed(2)} €</td>
@@ -1581,8 +1722,8 @@
                                 </tr>
 
                                 <tr style="background:#1e293b;"><td colspan="${totalLogColspan}"><b>3. VIE QUOTIDIENNE & PASSIONS</b></td></tr>
-                                <tr><td class="${tutoClass}">Courses / Alimentation</td>${colonnesCoursesHtml}</tr>
-                                <tr><td class="${tutoClass}">Loisirs / Sorties</td>${colonnesLoisirsHtml}</tr>
+                                <tr><td>Courses / Alimentation</td>${colonnesCoursesHtml}</tr>
+                                <tr><td>Loisirs / Sorties</td>${colonnesLoisirsHtml}</tr>
                                 ${abosHtml}
                                 
                                 <tr style="color:#38bdf8; font-weight:bold; background:rgba(56,189,248,0.05);">
@@ -1634,27 +1775,17 @@
                         </div>
 
                         <div style="display: flex; align-items: center; justify-content: center; gap: 5px; margin-bottom: 12px;">
-                            <input type="number" id="inp-side-goal" value="${cfg.objectifResteAVivre}" oninput="synchroniserDonneesDynamiques()" style="background: #1e293b; border: 2px solid #f87171; color: #fff; padding: 8px; font-size: 16px; font-weight: bold; width: 90px; text-align: center; border-radius: 6px; outline: none;">
-                            <span style="font-weight: bold; color: #f87171; font-size: 15px;">balles</span>
+                            <input type="number" id="inp-side-goal" value="${cfg.objectifResteAVivre}" oninput="synchroniserDonneesDynamiques()" style="background: #1e293b; border: 2px solid #f87171; color: #fff; padding: 8px; font-size: 16px; font-weight: bold; width: 90px; text-align: center; border-radius: 6px;">
                         </div>
-                        <div style="font-size: 11px; color: #fecaca; margin-bottom: 12px; line-height: 1.3;">
-                            Cible l'option choisie avec l'ordre de priorité (Alim > Abos > Stratégie Surplus).
-                        </div>
-                        <button type="button" onclick="spamOptimization()" style="background: #ef4444; color: white; border: none; width: 100%; padding: 14px 10px; border-radius: 6px; font-size: 14px; font-weight: 900; cursor: pointer; text-transform: uppercase; box-shadow: 0 4px 10px rgba(0,0,0,0.4); transition: transform 0.1s; letter-spacing: 0.5px; margin-bottom: 8px;">
-                            🔥 SPAM THIS BUTTON TO OPTIMIZE 🔥
-                        </button>
-                        <button type="button" onclick="restaurerDernierEnregistrement()" style="background: #334155; color: #f8fafc; border: 1px solid #94a3b8; width: 100%; padding: 8px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer;">
-                            🔄 Reset avant optimisation (Dernier "Mettre à jour")
+
+                        <button type="button" onclick="spamOptimization()" style="background: #f87171; color: #0f172a; border: none; padding: 10px 15px; border-radius: 6px; font-weight: 900; font-size: 13px; cursor: pointer; text-transform: uppercase; width: 100%; box-shadow: 0 2px 5px rgba(0,0,0,0.3); transition: background 0.2s;">
+                            🚀 Ajuster le budget automatiquement
                         </button>
                     </div>
                 </div>
             `;
 
-            if (modeActuel === 'proprietaire') {
-                content.innerHTML = formHtml + tableauFluxHtml;
-            } else if (modeActuel === 'projet') {
-                content.innerHTML = projetHtml;
-            }
+            content.innerHTML = (modeActuel === 'proprietaire') ? (formHtml + tableauFluxHtml) : projetHtml;
         }
 
         afficherInterfaceAuth();
