@@ -9,6 +9,33 @@
         .container { max-width: 1400px; margin: auto; background: #1e293b; padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
         h1, h2, h3 { color: #38bdf8; }
         
+        /* Animation néon fade-in fade-out */
+        @keyframes neonFade {
+            0%, 100% {
+                color: #38bdf8;
+                text-shadow: 0 0 5px rgba(56, 189, 248, 0.4), 0 0 10px rgba(56, 189, 248, 0.2);
+            }
+            50% {
+                color: #bae6fd;
+                text-shadow: 0 0 15px rgba(56, 189, 248, 0.9), 0 0 25px rgba(56, 189, 248, 0.6);
+            }
+        }
+        .neon-title {
+            animation: neonFade 3s infinite ease-in-out;
+            font-weight: bold;
+            font-size: 14px;
+            letter-spacing: 0.5px;
+        }
+
+        /* Animation clignotement pour le mode tuto */
+        @keyframes blinkTuto {
+            0%, 100% { opacity: 1; color: #38bdf8; text-shadow: 0 0 8px #38bdf8; }
+            50% { opacity: 0.3; color: #94a3b8; text-shadow: none; }
+        }
+        .tuto-blink {
+            animation: blinkTuto 1s infinite;
+        }
+        
         /* Style des grands onglets en haut (Sticky) */
         .main-tabs-container { 
             display: flex; 
@@ -83,6 +110,11 @@
                 <span>👤 Connecté en tant qu'utilisateur : <b id="current-username" style="color:#4ade80;"></b></span>
                 <button type="button" onclick="seDeconnecter()" style="background:#ef4444; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px;">Se déconnecter</button>
             </div>
+            
+            <!-- SECTION DROITE DE LA LIGNE : MODE TUTO + TITRE NEON -->
+            <div style="display:flex; align-items:center; gap:15px; margin-left:auto;">
+                <div class="neon-title">Simulateur_AntiGalère_V0.1.0</div>
+            </div>
         </div>
 
         <!-- ONGLETS PRINCIPAUX + BOUTONS STATUT (CELIBATAIRE - COLOC - COUPLE) -->
@@ -95,7 +127,9 @@
             <button id="btn-coloc" onclick="changerStatutFoyer('coloc')">Colocataires (WIP)</button>
             <button id="btn-couple" onclick="changerStatutFoyer('couple')">Couple (WIP)</button>
         </div>
-
+        <label style="font-size:12px; color:#38bdf8; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:5px;">
+                    <input type="checkbox" id="chk-mode-tuto" onchange="render()" style="cursor:pointer; width:15px; height:15px; accent-color:#38bdf8;"> Mode Tuto
+                </label>
         <!-- EN-TÊTE PROFIL & SAUVEGARDE MULTI-PROFILS -->
         <div style="background:linear-gradient(135deg, #1e293b, #0f172a); border:2px solid #38bdf8; padding:15px; border-radius:8px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px; box-shadow:0 0 15px rgba(56,189,248,0.25);">
             <div>
@@ -695,6 +729,10 @@
                 cfg.salaireNet = (brutTotal * 0.78) * (1 - (cfg.tauxPas / 100));
             }
 
+            // Vérification de l'état de la case mode tuto
+            const modeTutoActif = document.getElementById('chk-mode-tuto') ? document.getElementById('chk-mode-tuto').checked : false;
+            const tutoClass = modeTutoActif ? 'tuto-blink' : '';
+
             // Gestion propre des états actifs des onglets principaux
             document.querySelectorAll('.main-tabs-container button').forEach(b => b.classList.remove('active'));
             if(document.getElementById(`btn-${modeActuel}`)) {
@@ -797,10 +835,10 @@
                     <div class="form-section-card">
                         <div class="form-section-title">💶 1. Salaires & Revenus Mensuels</div>
                         <div class="form-grid-inner">
-                            <div class="form-group"><label>Salaire Brut (€)</label>${makeInput('salaireBrut', cfg.salaireBrut)}</div>
+                            <div class="form-group"><label class="${tutoClass}">Salaire Brut (€)</label>${makeInput('salaireBrut', cfg.salaireBrut)}</div>
                             <div class="form-group"><label>Prime d'ancienneté (€)</label>${makeInput('primeAnciennete', cfg.primeAnciennete)}</div>
                             <div class="form-group"><label>Prélèvement à la source (%)</label>${makeInput('tauxPas', cfg.tauxPas)}</div>
-                            <div class="form-group"><label>Salaire Net Réel (Calculé)</label><div class="input-wrapper"><input type="number" step="any" name="salaireNet" value="${cfg.salaireNet.toFixed(2)}" readonly style="color:#4ade80;"></div></div>
+                            <div class="form-group"><label class="${tutoClass}">Salaire Net Réel (Calculé)</label><div class="input-wrapper"><input type="number" step="any" name="salaireNet" value="${cfg.salaireNet.toFixed(2)}" readonly style="color:#4ade80;"></div></div>
                         </div>
                         <button type="submit" class="action-btn">Valider</button>
                     </div>
@@ -823,8 +861,8 @@
                             <div class="form-group"><label>Apport Objectif (€)</label>${makeInput('apport', cfg.apport)}</div>
                             <div class="form-group"><label>TAEG global (%)</label>${makeInput('taeg', cfg.taeg)}</div>
                             <div class="form-group"><label>Assurance emprunteur (%/an)</label>${makeInput('assuranceTauxAnnuel', cfg.assuranceTauxAnnuel)}</div>
-                            <div class="form-group"><label>Charges Copropriété (€)</label>${makeInput('copro', cfg.copro)}</div>
-                            <div class="form-group"><label>Taxe Foncière (€)</label>${makeInput('taxe', cfg.taxe)}</div>
+                            <div class="form-group"><label class="${tutoClass}">Charges Copropriété (€)</label>${makeInput('copro', cfg.copro)}</div>
+                            <div class="form-group"><label class="${tutoClass}">Taxe Foncière (€)</label>${makeInput('taxe', cfg.taxe)}</div>
                             <div class="form-group"><label>Montant Projet Cible Libre (€)</label>${makeInput('montantProjet', cfg.montantProjet)}</div>
                         </div>
                         <button type="submit" class="action-btn">Valider</button>
@@ -849,11 +887,11 @@
                     <div class="form-section-card">
                         <div class="form-section-title">🛒 4. Charges Courantes & Vie Quotidienne</div>
                         <div class="form-grid-inner">
-                            <div class="form-group"><label>Loyer Actuel (€) (Si non propriétaire)</label>${makeInput('loyerActuel', cfg.loyerActuel)}</div>
-                            <div class="form-group"><label>Abonnement Internet (€)</label>${makeInput('internet', cfg.internet)}</div>
-                            <div class="form-group"><label>Transport (€)</label>${makeInput('transport', cfg.transport)}</div>
-                            <div class="form-group"><label>Courses / Alimentation (€)</label>${makeInput('courses', cfg.courses)}</div>
-                            <div class="form-group"><label>Loisirs / Sorties (€)</label>${makeInput('loisirs', cfg.loisirs)}</div>
+                            <div class="form-group"><label class="${tutoClass}">Loyer Actuel (€) (Si non propriétaire)</label>${makeInput('loyerActuel', cfg.loyerActuel)}</div>
+                            <div class="form-group"><label class="${tutoClass}">Abonnement Internet (€)</label>${makeInput('internet', cfg.internet)}</div>
+                            <div class="form-group"><label class="${tutoClass}">Transport (€)</label>${makeInput('transport', cfg.transport)}</div>
+                            <div class="form-group"><label class="${tutoClass}">Courses / Alimentation (€)</label>${makeInput('courses', cfg.courses)}</div>
+                            <div class="form-group"><label class="${tutoClass}">Loisirs / Sorties (€)</label>${makeInput('loisirs', cfg.loisirs)}</div>
                         </div>
                         <button type="submit" class="action-btn">Valider</button>
                     </div>
@@ -913,7 +951,7 @@
                             <button type="button" class="action-btn" onclick="ajouterAbonnement()" style="margin:0; padding:4px 8px; font-size:11px;">+ Ajouter abonnement</button>
                         </div>
                         <table id="table-abos" style="margin:0;">
-                            <tr><th>Libellé</th><th>Montant (€ / mois)</th><th>Action</th></tr>`;
+                            <tr><th class="${tutoClass}">Libellé (Abonnement)</th><th>Montant (€ / mois)</th><th>Action</th></tr>`;
             
             abonnementsVie.forEach((abo, index) => {
                 let styleAbo = abo.montant === 0 ? 'color: #ef4444; font-weight: bold; background: rgba(239, 68, 68, 0.1);' : '';
@@ -1380,7 +1418,7 @@
                     <td class="${dureeBilanImmo===30?'selected-loan-col':''}">-${assuranceMensuelle.toFixed(2)} €</td>
                 </tr>
                 <tr>
-                    <td>Charges de Copropriété</td>
+                    <td class="${tutoClass}">Charges de Copropriété</td>
                     <td class="${dureeBilanImmo===10?'selected-loan-col':''}">-${cfg.copro.toFixed(2)} €</td>
                     <td class="${dureeBilanImmo===15?'selected-loan-col':''}">-${cfg.copro.toFixed(2)} €</td>
                     <td class="${dureeBilanImmo===20?'selected-loan-col':''}">-${cfg.copro.toFixed(2)} €</td>
@@ -1388,7 +1426,7 @@
                     <td class="${dureeBilanImmo===30?'selected-loan-col':''}">-${cfg.copro.toFixed(2)} €</td>
                 </tr>
                 <tr>
-                    <td>Taxe Foncière</td>
+                    <td class="${tutoClass}">Taxe Foncière</td>
                     <td class="${dureeBilanImmo===10?'selected-loan-col':''}">-${cfg.taxe.toFixed(2)} €</td>
                     <td class="${dureeBilanImmo===15?'selected-loan-col':''}">-${cfg.taxe.toFixed(2)} €</td>
                     <td class="${dureeBilanImmo===20?'selected-loan-col':''}">-${cfg.taxe.toFixed(2)} €</td>
@@ -1396,7 +1434,7 @@
                     <td class="${dureeBilanImmo===30?'selected-loan-col':''}">-${cfg.taxe.toFixed(2)} €</td>
                 </tr>
             ` : `
-                <tr><td>Loyer Actuel</td><td>-${cfg.loyerActuel.toFixed(2)} €</td></tr>
+                <tr><td class="${tutoClass}">Loyer Actuel</td><td>-${cfg.loyerActuel.toFixed(2)} €</td></tr>
             `;
 
             let colonnesInvestHtml = cfg.possedeImmo ? `
@@ -1483,7 +1521,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><b>SALAIRE NET MENSUEL</b></td>
+                                    <td class="${tutoClass}"><b>SALAIRE NET MENSUEL</b></td>
                                     ${cfg.possedeImmo ? `
                                         <td class="${dureeBilanImmo===10?'selected-loan-col':''}" style="color:#4ade80">+${cfg.salaireNet.toFixed(2)} €</td>
                                         <td class="${dureeBilanImmo===15?'selected-loan-col':''}" style="color:#4ade80">+${cfg.salaireNet.toFixed(2)} €</td>
@@ -1543,8 +1581,8 @@
                                 </tr>
 
                                 <tr style="background:#1e293b;"><td colspan="${totalLogColspan}"><b>3. VIE QUOTIDIENNE & PASSIONS</b></td></tr>
-                                <tr><td>Courses / Alimentation</td>${colonnesCoursesHtml}</tr>
-                                <tr><td>Loisirs / Sorties</td>${colonnesLoisirsHtml}</tr>
+                                <tr><td class="${tutoClass}">Courses / Alimentation</td>${colonnesCoursesHtml}</tr>
+                                <tr><td class="${tutoClass}">Loisirs / Sorties</td>${colonnesLoisirsHtml}</tr>
                                 ${abosHtml}
                                 
                                 <tr style="color:#38bdf8; font-weight:bold; background:rgba(56,189,248,0.05);">
