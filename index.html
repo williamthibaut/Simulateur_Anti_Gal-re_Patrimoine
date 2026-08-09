@@ -78,7 +78,6 @@
 
         .form-section-card { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 15px; margin-bottom: 15px; transition: opacity 0.3s ease, filter 0.3s ease; }
         .form-section-card.disabled-section { opacity: 0.45; }
-        /* Modification pour que le header du projet immo reste totalement cliquable et coloré même quand la box est grisée */
         .form-section-card.disabled-section .form-section-title { opacity: 1 !important; pointer-events: auto !important; }
         .form-section-card.disabled-section input:not([type="checkbox"]), 
         .form-section-card.disabled-section select,
@@ -122,13 +121,12 @@
                 <button type="button" onclick="seDeconnecter()" style="background:#ef4444; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px;">Se déconnecter</button>
             </div>
             
-            <!-- SECTION DROITE DE LA LIGNE : TITRE NEON SEUL -->
             <div style="display:flex; align-items:center; gap:15px; margin-left:auto;">
                 <div class="neon-title">Simulateur_AntiGalère_V0.1.0</div>
             </div>
         </div>
 
-        <!-- ONGLETS PRINCIPAUX + BOUTONS STATUT (CELIBATAIRE - COLOC - COUPLE) -->
+        <!-- ONGLETS PRINCIPAUX + BOUTONS STATUT -->
         <div class="main-tabs-container">
             <button id="btn-proprietaire" onclick="changerMode('proprietaire')">Ressources & Dépenses</button>
             <button id="btn-projet" onclick="changerMode('projet')">Projet & Patrimoine</button>
@@ -139,25 +137,37 @@
             <button id="btn-couple" onclick="changerStatutFoyer('couple')">Couple (WIP)</button>
         </div>
 
-        <!-- EN-TÊTE PROFIL & SAUVEGARDE MULTI-PROFILS + CHECKBOX MODE TUTO DÉPLACÉE -->
+        <!-- EN-TÊTE PROFIL & SAUVEGARDE MULTI-PROFILS + CHECKBOX MODE TUTO -->
         <div style="background:linear-gradient(135deg, #1e293b, #0f172a); border:2px solid #38bdf8; padding:15px; border-radius:8px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px; box-shadow:0 0 15px rgba(56,189,248,0.25);">
             <div>
                 <h1 id="titre-mode" style="margin:0; font-size:1.3rem; color:#f8fafc; text-transform:uppercase;">Ressources & Dépenses Mensuelles</h1>
                 <span style="font-size:11px; color:#94a3b8;">Gérez vos flux financiers et simulez vos projets d'avenir</span>
                 
-                <!-- CHECKBOX MODE TUTO DÉPLACÉE ICI -->
                 <div style="margin-top: 10px;">
                     <label style="font-size:12px; color:#38bdf8; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:5px; background: rgba(56,189,248,0.1); padding: 4px 8px; border-radius: 4px; border: 1px solid #38bdf8;">
                         <input type="checkbox" id="chk-mode-tuto" onchange="render()" style="cursor:pointer; width:15px; height:15px; accent-color:#38bdf8;"> Mode Tuto
                     </label>
                 </div>
             </div>
-            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                <select id="select-profils" onchange="changerProfilActif(this.value)" style="background:#1e293b; color:white; border:1px solid #38bdf8; padding:8px; border-radius:4px; font-size:12px; font-weight:bold;">
-                    <option value="">-- Choisir un profil --</option>
-                </select>
-                <button type="button" onclick="sauvegarderNouveauProfil()" style="background:#10b981; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:bold;">💾 Sauvegarder Profil</button>
-                <button type="button" onclick="supprimerProfilActif()" style="background:#ef4444; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:bold;">🗑️ Supprimer</button>
+            
+            <div style="display:flex; gap:15px; align-items:center; flex-wrap:wrap;">
+                <!-- Bulles d'aide Mode Tuto demandées -->
+                <div id="tuto-bulles-container" style="display:none; flex-direction:column; gap:6px; max-width:340px;">
+                    <div style="background: #fffbeb; color: #b45309; border: 1px solid #f59e0b; padding: 6px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; line-height: 1.3;">
+                        💡 <b>Étape 1 :</b> Créez un compte (données stockées localement sur votre navigateur, évitez vos mots de passe importants).
+                    </div>
+                    <div style="background: #fffbeb; color: #b45309; border: 1px solid #f59e0b; padding: 6px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; line-height: 1.3;">
+                        💡 <b>Étape 2 :</b> Remplissez les cases clignotantes pour définir votre profil, puis revenez ici pour cliquer sur <b>"💾 Sauvegarder Profil"</b>.
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                    <select id="select-profils" onchange="changerProfilActif(this.value)" style="background:#1e293b; color:white; border:1px solid #38bdf8; padding:8px; border-radius:4px; font-size:12px; font-weight:bold;">
+                        <option value="">-- Choisir un profil --</option>
+                    </select>
+                    <button type="button" onclick="sauvegarderNouveauProfil()" style="background:#10b981; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:bold;">💾 Sauvegarder Profil</button>
+                    <button type="button" onclick="supprimerProfilActif()" style="background:#ef4444; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:bold;">🗑️ Supprimer</button>
+                </div>
             </div>
         </div>
         
@@ -176,6 +186,7 @@
         let cfg = {
             salaireBrut: 2950,
             primeAnciennete: 170,
+            primeAnnuelle: 0, // Ajout de la prime annuelle
             tauxPas: 5.7,
             salaireNet: 0,
             travaux: 0,
@@ -488,24 +499,19 @@
         function calculerImpotRevenu(revenuNetImposable) {
             if (revenuNetImposable <= 0) return 0;
             let impot = 0;
-            // Tranche 1 : jusqu'à 11600 € à 0%
             if (revenuNetImposable > 11600) {
-                // Tranche 2 : de 11 601 € à 29 579 € à 11%
                 let t2 = Math.min(29579, revenuNetImposable) - 11600;
                 impot += t2 * 0.11;
             }
             if (revenuNetImposable > 29579) {
-                // Tranche 3 : de 29 580 € à 84 577 € à 30%
                 let t3 = Math.min(84577, revenuNetImposable) - 29579;
                 impot += t3 * 0.30;
             }
             if (revenuNetImposable > 84577) {
-                // Tranche 4 : de 84 578 € à 181 917 € à 41%
                 let t4 = Math.min(181917, revenuNetImposable) - 84577;
                 impot += t4 * 0.41;
             }
             if (revenuNetImposable > 181917) {
-                // Tranche 5 : au-delà de 181 917 € à 45%
                 let t5 = revenuNetImposable - 181917;
                 impot += t5 * 0.45;
             }
@@ -607,7 +613,6 @@
                 cfg.optionCibleOptimisation = String(dureeBilanImmo);
             }
 
-            // Synchronisation autoentrepreneur
             const inpCaMicro = document.getElementById('inp-ca-micro');
             if (inpCaMicro) cfg.caMicro = parseFloat(inpCaMicro.value) || 0;
 
@@ -779,15 +784,19 @@
         }
 
         function render() {
-            // Vérification de l'état de la case mode tuto
             const modeTutoActif = document.getElementById('chk-mode-tuto') ? document.getElementById('chk-mode-tuto').checked : false;
             
-            // Si le mode tuto vient d'être activé pour la première fois, on initialise les valeurs par défaut du tuto
-            // On utilise une variable globale ou de suivi si besoin, mais ici on s'assure que si on coche, cela s'applique uniquement à l'activation
+            // Affichage ou masquage des bulles d'aide du mode tuto
+            const bullesContainer = document.getElementById('tuto-bulles-container');
+            if (bullesContainer) {
+                bullesContainer.style.display = modeTutoActif ? 'flex' : 'none';
+            }
+
             if (window._dernierModeTuto !== modeTutoActif) {
                 if (modeTutoActif) {
                     cfg.salaireBrut = 1800;
                     cfg.primeAnciennete = 0;
+                    cfg.primeAnnuelle = 0;
                     cfg.pea = 0;
                     cfg.per = 0;
                     cfg.bitstack = 0;
@@ -809,8 +818,9 @@
             const netAvantPas = brutTotal * 0.78; 
             cfg.salaireNet = netAvantPas * (1 - (cfg.tauxPas / 100));
 
-            // Calcul des impôts annuels (Salaires net imposable avec abattement de 10% + micro-entreprise)
-            let salaireAnnuelNetImmatériel = (brutTotal * 12) * 0.78; // approximation nette annuelle brute avant IR
+            // Calcul des impôts annuels intégrant la prime annuelle (répartie ou brute dans l'imposable annuel)
+            let salaireAnnuelNetBrutTotal = (brutTotal * 12) + (cfg.primeAnnuelle || 0);
+            let salaireAnnuelNetImmatériel = salaireAnnuelNetBrutTotal * 0.78; 
             let abattementSalarie = salaireAnnuelNetImmatériel * 0.10;
             let revenuImposableSalaires = Math.max(0, salaireAnnuelNetImmatériel - abattementSalarie);
 
@@ -822,13 +832,11 @@
 
             const tutoClass = modeTutoActif ? 'tuto-blink' : '';
 
-            // Gestion propre des états actifs des onglets principaux
             document.querySelectorAll('.main-tabs-container button').forEach(b => b.classList.remove('active'));
             if(document.getElementById(`btn-${modeActuel}`)) {
                 document.getElementById(`btn-${modeActuel}`).classList.add('active');
             }
 
-            // Gestion propre des états actifs du sous-menu foyer
             document.querySelectorAll('.couple-tab-container button').forEach(b => b.classList.remove('active'));
             if(document.getElementById(`btn-${statutFoyerActuel}`)) {
                 document.getElementById(`btn-${statutFoyerActuel}`).classList.add('active');
@@ -919,25 +927,16 @@
             let totalDispo = totalDispoBrut - cfg.depenseFuturMontant;
             let totalBloque = placementsBloques.reduce((acc, p) => acc + p.solde, 0);
 
-            let messageTutoHtml = '';
-            if (modeTutoActif) {
-                messageTutoHtml = `
-                    <div style="background: #fffbeb; color: #b45309; border: 2px solid #f59e0b; padding: 12px 15px; border-radius: 6px; margin-bottom: 15px; font-weight: bold; font-size: 13px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
-                        💡 Recommandation : veuillez d'abord remplir les cases clignotant en bleu pour définir votre situation actuelle.
-                    </div>
-                `;
-            }
-
             let boxProjetPatrimoineClass = modeTutoActif ? 'form-section-card card-tuto-blink' : 'form-section-card';
 
             let formHtml = `
-                ${messageTutoHtml}
                 <form onsubmit="sauvegarderFormulaire(event)">
                     <div class="form-section-card">
                         <div class="form-section-title">💶 1. Salaires & Revenus Mensuels</div>
                         <div class="form-grid-inner">
                             <div class="form-group"><label class="${tutoClass}">Salaire Brut (€)</label>${makeInput('salaireBrut', cfg.salaireBrut)}</div>
                             <div class="form-group"><label>Prime d'ancienneté (€)</label>${makeInput('primeAnciennete', cfg.primeAnciennete)}</div>
+                            <div class="form-group"><label>Prime annuelle (€)</label>${makeInput('primeAnnuelle', cfg.primeAnnuelle)}</div>
                             <div class="form-group"><label>Prélèvement à la source (%)</label>${makeInput('tauxPas', cfg.tauxPas)}</div>
                             <div class="form-group"><label class="${tutoClass}">Salaire Net Réel (Calculé)</label><div class="input-wrapper"><input type="number" step="any" name="salaireNet" value="${cfg.salaireNet.toFixed(2)}" readonly style="color:#4ade80;"></div></div>
                         </div>
@@ -1027,7 +1026,6 @@
                             <button type="submit" class="action-btn">Valider</button>
                         </div>
 
-                        <!-- PETITE FENÊTRE BLANCHE/JAUNE RECOMMANDATION -->
                         <div style="background: #fffbeb; color: #b45309; border: 1px solid #f59e0b; padding: 8px 12px; border-radius: 6px; margin-bottom: 15px; font-size: 12px; font-weight: bold;">
                             Renseignez ici les montants de vos comptes actuellement ainsi que les éventuels versements mensuels que vous y effectuez.
                         </div>
@@ -1141,9 +1139,6 @@
 
                 let totalPatrimoineSupp = patrimoineSupplementaire.reduce((acc, item) => acc + item.valeur, 0);
                 
-                // Intégration des impôts annuels (impôt sur le revenu + taxe foncière si propriétaire) dans le patrimoine final et les flux
-                // Note : On prend en compte la taxe foncière annuelle (cfg.taxe) mais sans la compter deux fois car elle fait déjà partie des charges immo mensuelles/annuelles. 
-                // Pour refléter l'impact global sur le patrimoine ou la trésorerie de fin d'année, on peut soustraire l'impôt annuel sur le revenu global de la trésorerie/patrimoine.
                 let patrimoineTotalInstantT = estimationReventeInstantT + totalDispo + totalBloque + totalPatrimoineSupp - impotAnnuelRevenu;
 
                 const calculerFuturCompte = (soldeActuel, versementPerso, versementExterne, tauxAnnuel, annees) => {
