@@ -743,7 +743,19 @@
             let revenuImposableMicro = Math.max(0, cfg.caMicro * (1 - abattementMicro));
 
             let revenuNetImposableTotal = revenuImposableSalaires + revenuImposableMicro;
-            let impotAnnuelRevenu = calculerImpotRevenu(revenuNetImposableTotal);
+            
+            // Déduction des versements PER annuels (total annuel versé sur les PER)
+            let totalPerAnnuel = placementsBloques
+                .filter(p => p.nom.toUpperCase().includes('PER'))
+                .reduce((acc, p) => acc + ((p.versementMensuel || 0) * 12), 0);
+            
+            let revenuNetImposableAjuste = Math.max(0, revenuNetImposableTotal - totalPerAnnuel);
+            let impotAnnuelRevenu = calculerImpotRevenu(revenuNetImposableAjuste);
+            
+            // Calcul du taux / montant mensuel de prélèvement à la source pour 0€ d'impôt de régularisation
+            let netImposableTotalMensuelRef = (netAvantPas * 12) + (cfg.primeAnnuelle || 0);
+            let estimationPasMensuel0 = netImposableTotalMensuelRef > 0 ? (impotAnnuelRevenu / 12) : 0;
+            let tauxPasReelCible = netImposableTotalMensuelRef > 0 ? (impotAnnuelRevenu / netImposableTotalMensuelRef) * 100 : 0;
 
             const tutoClass = modeTutoActif ? 'tuto-blink' : '';
 
@@ -1012,11 +1024,17 @@
                         <button type="submit" class="action-btn">Valider</button>
                     </div>
 
-                    <div style="background:#1e293b; border:1px solid #38bdf8; border-radius:6px; padding:15px; margin-bottom:15px; text-align:center;">
-                        <h3 style="margin-top:0; color:#38bdf8; font-size:13px; text-transform:uppercase;">🏛️ Estimation des Impôts Annuels</h3>
-                        <div style="display:flex; justify-content:around; gap:15px; flex-wrap:wrap; font-size:13px; margin-top:8px;">
-                            <div>Revenu Net Imposable Total : <b style="color:#f8fafc;">${revenuNetImposableTotal.toFixed(2)} €</b></div>
+                    <div style="background:#1e293b; border:1px solid #38bdf8; border-radius:6px; padding:15px; margin-bottom:15px;">
+                        <h3 style="margin-top:0; color:#38bdf8; font-size:13px; text-transform:uppercase; text-align:center;">🏛️ Estimation des Impôts Annuels</h3>
+                        <div style="display:flex; flex-direction:column; gap:8px; font-size:13px; margin-top:8px;">
+                            <div>Revenu Net Imposable Total : <b style="color:#f8fafc;">${revenuNetImposableTotal.toFixed(2)} €</b> (après déduction des versements PER annuels : <b style="color:#38bdf8;">${revenuNetImposableAjuste.toFixed(2)} €</b> nets imposables)</div>
                             <div>Impôt sur le Revenu Estimé (Barème par tranches) : <b style="color:#f87171;">${impotAnnuelRevenu.toFixed(2)} € / an</b> (~${(impotAnnuelRevenu/12).toFixed(2)} €/mois)</div>
+                            <div style="border-top:1px solid #334155; padding-top:8px; margin-top:4px;">
+                                🎯 <b>Estimation de votre prélèvement à la source (pour 0€ d'impôt à la fin de l'année) :</b><br>
+                                • Montant mensuel recommandé : <b style="color:#4ade80;">~${estimationPasMensuel0.toFixed(2)} € / mois</b><br>
+                                • Taux personnalisé estimé : <b style="color:#4ade80;">${tauxPasReelCible.toFixed(2)} %</b>
+                                <span style="display:block; font-size:11px; color:#94a3b8; margin-top:2px;">Calculé sur la base de votre revenu net imposable annuel ajusté de vos versements PER de janvier à décembre.</span>
+                            </div>
                         </div>
                     </div>
 
@@ -1440,13 +1458,13 @@
                 }
             });
 
-            // Génération dynamique des lignes pour les comptes disponibles et placements bloqués
-            let fluxComptesDispoHtml = '';
+            // Groupes dynamiques dans le tableau des flux financiers mensuels
+            let fluxComptesDispoHtml = `<tr style="background:#334155; color:#38bdf8; font-weight:bold;"><td colspan="${cfg.possedeImmo ? 6 : 2}">📂 Comptes Disponibles</td></tr>`;
             comptesDispo.forEach(c => {
                 let v = c.versementMensuel || 0;
                 if (cfg.possedeImmo) {
                     fluxComptesDispoHtml += `<tr>
-                        <td>${c.nom}</td>
+                        <td>&nbsp;&nbsp;↳ ${c.nom}</td>
                         <td class="${dureeBilanImmo===10?'selected-loan-col':''}">-${v.toFixed(2)} €</td>
                         <td class="${dureeBilanImmo===15?'selected-loan-col':''}">-${v.toFixed(2)} €</td>
                         <td class="${dureeBilanImmo===20?'selected-loan-col':''}">-${v.toFixed(2)} €</td>
@@ -1454,16 +1472,16 @@
                         <td class="${dureeBilanImmo===30?'selected-loan-col':''}">-${v.toFixed(2)} €</td>
                     </tr>`;
                 } else {
-                    fluxComptesDispoHtml += `<tr><td>${c.nom}</td><td>-${v.toFixed(2)} €</td></tr>`;
+                    fluxComptesDispoHtml += `<tr><td>&nbsp;&nbsp;↳ ${c.nom}</td><td>-${v.toFixed(2)} €</td></tr>`;
                 }
             });
 
-            let fluxPlacementsBloquesHtml = '';
+            let fluxPlacementsBloquesHtml = `<tr style="background:#334155; color:#38bdf8; font-weight:bold;"><td colspan="${cfg.possedeImmo ? 6 : 2}">🔒 Comptes Bloqués</td></tr>`;
             placementsBloques.forEach(p => {
                 let v = p.versementMensuel || 0;
                 if (cfg.possedeImmo) {
                     fluxPlacementsBloquesHtml += `<tr>
-                        <td>${p.nom}</td>
+                        <td>&nbsp;&nbsp;↳ ${p.nom}</td>
                         <td class="${dureeBilanImmo===10?'selected-loan-col':''}">-${v.toFixed(2)} €</td>
                         <td class="${dureeBilanImmo===15?'selected-loan-col':''}">-${v.toFixed(2)} €</td>
                         <td class="${dureeBilanImmo===20?'selected-loan-col':''}">-${v.toFixed(2)} €</td>
@@ -1471,7 +1489,7 @@
                         <td class="${dureeBilanImmo===30?'selected-loan-col':''}">-${v.toFixed(2)} €</td>
                     </tr>`;
                 } else {
-                    fluxPlacementsBloquesHtml += `<tr><td>${p.nom}</td><td>-${v.toFixed(2)} €</td></tr>`;
+                    fluxPlacementsBloquesHtml += `<tr><td>&nbsp;&nbsp;↳ ${p.nom}</td><td>-${v.toFixed(2)} €</td></tr>`;
                 }
             });
 
@@ -1494,8 +1512,9 @@
             `;
 
             let cellulesLogement = cfg.possedeImmo ? `
+                <tr style="background:#334155; color:#38bdf8; font-weight:bold;"><td colspan="6">🏠 Investissement locatif</td></tr>
                 <tr>
-                    <td>Crédit Immobilier</td>
+                    <td>&nbsp;&nbsp;↳ Crédit Immobilier</td>
                     <td class="${dureeBilanImmo===10?'selected-loan-col':''}">-${m10.toFixed(2)} €</td>
                     <td class="${dureeBilanImmo===15?'selected-loan-col':''}">-${m15.toFixed(2)} €</td>
                     <td class="${dureeBilanImmo===20?'selected-loan-col':''}">-${m20.toFixed(2)} €</td>
@@ -1503,7 +1522,7 @@
                     <td class="${dureeBilanImmo===30?'selected-loan-col':''}">-${m30.toFixed(2)} €</td>
                 </tr>
                 <tr>
-                    <td>Assurance Emprunteur</td>
+                    <td>&nbsp;&nbsp;↳ Assurance Emprunteur</td>
                     <td class="${dureeBilanImmo===10?'selected-loan-col':''}">-${assuranceMensuelle.toFixed(2)} €</td>
                     <td class="${dureeBilanImmo===15?'selected-loan-col':''}">-${assuranceMensuelle.toFixed(2)} €</td>
                     <td class="${dureeBilanImmo===20?'selected-loan-col':''}">-${assuranceMensuelle.toFixed(2)} €</td>
@@ -1511,7 +1530,7 @@
                     <td class="${dureeBilanImmo===30?'selected-loan-col':''}">-${assuranceMensuelle.toFixed(2)} €</td>
                 </tr>
                 <tr>
-                    <td>Charges de Copropriété</td>
+                    <td>&nbsp;&nbsp;↳ Charges de Copropriété</td>
                     <td class="${dureeBilanImmo===10?'selected-loan-col':''}">-${cfg.copro.toFixed(2)} €</td>
                     <td class="${dureeBilanImmo===15?'selected-loan-col':''}">-${cfg.copro.toFixed(2)} €</td>
                     <td class="${dureeBilanImmo===20?'selected-loan-col':''}">-${cfg.copro.toFixed(2)} €</td>
@@ -1519,7 +1538,7 @@
                     <td class="${dureeBilanImmo===30?'selected-loan-col':''}">-${cfg.copro.toFixed(2)} €</td>
                 </tr>
                 <tr>
-                    <td>Taxe Foncière</td>
+                    <td>&nbsp;&nbsp;↳ Taxe Foncière</td>
                     <td class="${dureeBilanImmo===10?'selected-loan-col':''}">-${cfg.taxe.toFixed(2)} €</td>
                     <td class="${dureeBilanImmo===15?'selected-loan-col':''}">-${cfg.taxe.toFixed(2)} €</td>
                     <td class="${dureeBilanImmo===20?'selected-loan-col':''}">-${cfg.taxe.toFixed(2)} €</td>
