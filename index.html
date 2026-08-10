@@ -1622,7 +1622,7 @@
                 let partsProj = cfg.dateDebutProjet.split('-');
                 let anProj = parseInt(partsProj[0]) || 2026;
                 let moisProj = parseInt(partsProj[1]) || 8;
-                let estDansFutur = (anProj > 2026) || (anProj === 2026 && moisProj > 8);
+                let estDansFutur = cfg.possedeImmo && ((anProj > 2026) || (anProj === 2026 && moisProj > 8));
 
                 let tableauxFluxHtml = '';
                 let lignesCreditDetailsHtml = '';
