@@ -832,7 +832,6 @@
         function exporterBilanPedagogiquePDF() {
             synchroniserDonneesDynamiques();
             
-            // Calculs globaux pour le résumé
             let brutTotal = cfg.salaireBrut + cfg.primeAnciennete;
             let netAvantPas = brutTotal * 0.78; 
             let salaireNetCalc = netAvantPas * (1 - (cfg.tauxPas / 100));
@@ -868,7 +867,6 @@
             let capitalEmprunte = Math.max(0, (cfg.montantProjet > 0 ? cfg.montantProjet : coutTotalProjetBase) - cfg.apport);
             let mensualiteCredit = calculerPret(capitalEmprunte, cfg.taeg, dureeBilanImmo);
 
-            // Simulation d'épargne future sur les comptes/placements (ex: jalons 1, 3, 5, 10 ans)
             const calculerFuturCompte = (soldeActuel, versementPerso, versementExterne, tauxAnnuel, annees) => {
                 let r = tauxAnnuel / 100 / 12;
                 let n = annees * 12;
@@ -892,7 +890,6 @@
                 epargneFuture10Ans += calculerFuturCompte(s, p.versementMensuel || 0, p.virementExterne || 0, p.rendement, 10);
             });
 
-            // Calcul des dates d'apport si projet immo actif
             let infoApportTexte = "";
             let infoCreditFinTexte = "";
             if (cfg.possedeImmo) {
@@ -914,7 +911,6 @@
                 let moisCibleApportIdx = totalMoisCibleApport % 12;
                 let dateApportStr = `${moisNomsComplets[moisCibleApportIdx]} ${anneeCibleApport}`;
 
-                // Date de fin du crédit
                 let partsDateProj = cfg.dateDebutProjet.split('-');
                 let anneeDebutCr = parseInt(partsDateProj[0]) || 2027;
                 let moisDebutCr = parseInt(partsDateProj[1]) || 8;
@@ -950,7 +946,6 @@
 
             let patrimoineTotal = valeurImmoEstimee + totalDispo + totalBloque + totalPatrimoineSupp;
 
-            // HTML dédié à la fenêtre d'impression PDF
             let pdfWindow = window.open('', '_blank');
             pdfWindow.document.write(`
                 <!DOCTYPE html>
@@ -1093,6 +1088,8 @@
             let totalPerAnnuel = placementsBloques.filter(p => p.nom.toUpperCase().includes('PER')).reduce((acc, p) => acc + ((p.versementMensuel || 0) * 12), 0);
             let revenuNetImposableAjuste = Math.max(0, revenuNetImposableTotal - totalPerAnnuel);
             let impotAnnuelRevenu = calculerImpotRevenu(revenuNetImposableAjuste);
+            let impotMensuelRevenu = impotAnnuelRevenu / 12;
+            let tauxPersonnaliseEstime = revenuNetImposableAjuste > 0 ? (impotAnnuelRevenu / salaireAnnuelNetBrutTotal) * 100 : 0;
 
             const tutoClass = modeTutoActif ? 'tuto-blink' : '';
 
@@ -1739,7 +1736,7 @@
                         <div style="background:var(--input-bg); padding:15px; border-radius:6px; margin-top:20px; border:1px solid var(--border-color);">
                             <h3 style="margin-top:0; color:var(--text-title); font-size:1rem; text-align:center;">📊 Évolution du Patrimoine (Barres Verticales & Rendement)</h3>
                             <div style="display:flex; justify-content:center; gap:20px; font-size:12px; margin-bottom:10px;">
-                                <span style="color:#4ade80; font-weight:bold;">■ Bénéfices de rendement (Vert clair)</span>
+                                <span style="color:#4ade80; font-weight:bold;">■ Bénéfices de rendement & Intérêts (Vert clair)</span>
                                 <span style="color:#3b82f6; font-weight:bold;">■ Montant investi (Bleu foncé)</span>
                             </div>
                             <div style="width:100%; overflow-x:auto;">
@@ -1762,7 +1759,6 @@
 
                     ${bilanImmoDetailsHtml}
 
-                    <!-- BOUTON EXPORT PDF PÉDAGOGIQUE -->
                     <div style="text-align: center; margin: 30px 0;">
                         <button type="button" onclick="exporterBilanPedagogiquePDF()" style="background: #10b981; color: white; border: none; padding: 14px 28px; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4); transition: background 0.2s;">
                             📥 Exporter en PDF (Bilan Pédagogique)
@@ -1893,6 +1889,22 @@
                 }
 
                 let titreTableauDemarrage = cfg.possedeImmo ? "📊 Flux Financiers Mensuels (Au démarrage du prêt)" : "📊 Flux Financiers Mensuels";
+
+                let boxImpotsHtml = `
+                    <div class="card" style="margin-top: 20px; border: 1px solid var(--text-title); background: var(--card-bg);">
+                        <h3 style="margin-top:0; color:var(--text-title); font-size:1.1rem;">🏛️ Estimation des Impôts Annuels</h3>
+                        <div style="font-size: 13px; line-height: 1.6;">
+                            • <b>Revenu Net Imposable Total :</b> ${revenuNetImposableTotal.toFixed(2)} € ${totalPerAnnuel > 0 ? `(après déduction des versements PER annuels : <b>${revenuNetImposableAjuste.toFixed(2)} € nets imposables</b>)` : ''}<br>
+                            • <b>Impôt sur le Revenu Estimé (Barème par tranches) :</b> <b style="color:#f87171;">${impotAnnuelRevenu.toFixed(2)} € / an</b> (~${impotMensuelRevenu.toFixed(2)} €/mois)<br><br>
+                            <div style="background: rgba(56, 189, 248, 0.1); padding: 10px; border-radius: 6px; border: 1px solid var(--text-title); margin-top: 8px;">
+                                <b style="color:var(--text-title);">🎯 Estimation de votre prélèvement à la source :</b><br>
+                                • Montant mensuel recommandé : <b style="color:#4ade80;">~${impotMensuelRevenu.toFixed(2)} € / mois</b><br>
+                                • Taux personnalisé estimé : <b style="color:#4ade80;">${tauxPersonnaliseEstime.toFixed(2)} %</b><br>
+                                <span style="font-size: 11px; opacity: 0.8;">Calculé sur la base de votre revenu net imposable annuel ajusté de vos versements PER de janvier à décembre.</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
 
                 if (estDansFutur) {
                     const totalLogLocataireActuel = cfg.loyerActuel + cfg.internet + cfg.transport;
@@ -2079,7 +2091,7 @@
                     </div>
                 `;
 
-                content.innerHTML = formHtml + tableauxFluxHtml;
+                content.innerHTML = formHtml + boxImpotsHtml + tableauxFluxHtml;
             } else {
                 content.innerHTML = projetHtml;
             }
