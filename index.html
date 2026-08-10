@@ -1319,14 +1319,14 @@
                 let bilanImmoDetailsHtml = '';
 
                 if (cfg.possedeImmo) {
+                    // CORRECTION ICI : On prend en compte le solde de TOUS les comptes non bloqués (comptesDispo)
                     let epargneDispoActuelle = 0;
                     comptesDispo.forEach(c => {
                         let soldeCompte = c.solde;
-                        if (c.nom === cfg.depenseFuturCompteCible) soldeCompte = Math.max(0, c.solde - cfg.depenseFuturMontant);
-                        let nomC = c.nom.toUpperCase();
-                        if (nomC.includes('LIVRET A') || nomC.includes('LEP') || nomC.includes('COURANT') || nomC.includes('DISPONIBLE')) {
-                            epargneDispoActuelle += soldeCompte;
+                        if (c.nom === cfg.depenseFuturCompteCible) {
+                            soldeCompte = Math.max(0, c.solde - cfg.depenseFuturMontant);
                         }
+                        epargneDispoActuelle += soldeCompte;
                     });
 
                     let totalAbosActuels = abonnementsVie.reduce((acc, a) => acc + a.montant, 0);
