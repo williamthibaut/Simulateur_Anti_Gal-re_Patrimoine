@@ -168,12 +168,6 @@
         button.del-btn:hover { background: #dc2626; }
         .card { background: var(--card-bg); padding: 15px; border-radius: 6px; margin-top: 15px; border: 1px solid var(--border-color); color: var(--text-main); }
         
-        .table-layout-container { display: grid; grid-template-columns: 1fr 320px; gap: 15px; align-items: start; margin-top: 10px; }
-        @media (max-width: 1100px) {
-            .table-layout-container { grid-template-columns: 1fr; }
-            .form-grid-inner { grid-template-columns: 1fr; }
-        }
-
         .theme-selector-bar {
             display: flex;
             gap: 6px;
@@ -218,7 +212,7 @@
                     <button type="button" onclick="changerTheme('dark')" style="background:#000000; color:#a1a1aa; border:1px solid #333;" title="Très Dark">🌑 Very Dark</button>
                     <button type="button" onclick="changerTheme('mystery')" style="background:linear-gradient(45deg, #ff00ff, #00ff66); color:#000; text-shadow:0 0 2px #fff;" title="Mystery Theme">🌀 Mystery</button>
                 </div>
-                <div class="neon-title">Simulateur_AntiGalère_V0.1.5</div>
+                <div class="neon-title">Simulateur_AntiGalère_V0.1.8</div>
             </div>
         </div>
 
@@ -235,8 +229,8 @@
         </div>
         <div class="couple-tab-container">
             <button id="btn-celibataire" class="active" onclick="changerStatutFoyer('celibataire')">Célibataire</button>
-            <button id="btn-coloc" onclick="changerStatutFoyer('coloc')">Colocataires (WIP)</button>
-            <button id="btn-couple" onclick="changerStatutFoyer('couple')">Couple (WIP)</button>
+            <button id="btn-coloc" onclick="changerStatutFoyer('coloc')">Colocataires</button>
+            <button id="btn-couple" onclick="changerStatutFoyer('couple')">Couple</button>
         </div>
 
         <!-- EN-TÊTE PROFIL & SAUVEGARDE -->
@@ -284,7 +278,6 @@
         let modeActuel = 'proprietaire';
         let statutFoyerActuel = 'celibataire';
         let dernierMessageAlerte = '';
-        let messageOptimiseurHtml = ''; 
         let utilisateurActuel = localStorage.getItem('appBankRpgUserActif') || null;
         let profilActifNom = '';
         let tutoDejaApplique = false; 
@@ -348,8 +341,6 @@
             { nom: 'Carte / Objets de collection', valeur: 700 },
             { nom: 'Quiver de Kitesurf', valeur: 1000 }
         ];
-
-        let snapshotDernierEnregistrement = null;
 
         function chargerSetupProfil(type) {
             cfg.possedeImmo = false; 
@@ -439,9 +430,8 @@
             cfg.saisieAplManuelle = -1;
             cfg.saisiePrimeActivitéManuelle = -1;
 
-            faireSnapshotFormulaire();
             render();
-            alert(`✨ Setup profil "${type.toUpperCase()}" appliqué avec succès (Compte Courant initialisé à 1000€) !`);
+            alert(`✨ Setup profil "${type.toUpperCase()}" appliqué avec succès !`);
         }
 
         function changerTheme(themeNom) {
@@ -567,7 +557,6 @@
             if (data.dureeBilanImmo) dureeBilanImmo = data.dureeBilanImmo;
             profilActifNom = nomProfil;
             
-            faireSnapshotFormulaire();
             render();
             alert(`📂 Profil "${nomProfil}" chargé !`);
         }
@@ -587,19 +576,6 @@
             chargerListeProfilsSelect();
             render();
             alert("🗑️ Profil supprimé.");
-        }
-
-        function faireSnapshotFormulaire() {
-            synchroniserDonneesDynamiques();
-            snapshotDernierEnregistrement = {
-                cfg: JSON.parse(JSON.stringify(cfg)),
-                abonnementsVie: JSON.parse(JSON.stringify(abonnementsVie)),
-                comptesDispo: JSON.parse(JSON.stringify(comptesDispo)),
-                placementsBloques: JSON.parse(JSON.stringify(placementsBloques)),
-                patrimoineSupplementaire: JSON.parse(JSON.stringify(patrimoineSupplementaire)),
-                dureeBilanImmo
-            };
-            dernierMessageAlerte = "💾 Budget validé et enregistré comme référence !";
         }
 
         function ajouterLignePatrimoineSupp() {
@@ -815,7 +791,6 @@
             const netAvantPas = brutTotal * 0.78; 
             cfg.salaireNet = netAvantPas * (1 - (cfg.tauxPas / 100));
 
-            faireSnapshotFormulaire();
             render();
         }
 
@@ -895,10 +870,6 @@
             let totalPerAnnuel = placementsBloques.filter(p => p.nom.toUpperCase().includes('PER')).reduce((acc, p) => acc + ((p.versementMensuel || 0) * 12), 0);
             let revenuNetImposableAjuste = Math.max(0, revenuNetImposableTotal - totalPerAnnuel);
             let impotAnnuelRevenu = calculerImpotRevenu(revenuNetImposableAjuste);
-            
-            let netImposableTotalMensuelRef = (netAvantPas * 12) + (cfg.primeAnnuelle || 0);
-            let estimationPasMensuel0 = netImposableTotalMensuelRef > 0 ? (impotAnnuelRevenu / 12) : 0;
-            let tauxPasReelCible = netImposableTotalMensuelRef > 0 ? (impotAnnuelRevenu / netImposableTotalMensuelRef) * 100 : 0;
 
             const tutoClass = modeTutoActif ? 'tuto-blink' : '';
 
@@ -940,7 +911,7 @@
             const totalVie = cfg.courses + cfg.loisirs + totalAbosCalcul;
 
             let totalRevenusGlobalMensuel = cfg.salaireNet + aplAuto + primeActAuto;
-            
+
             const reste10 = totalRevenusGlobalMensuel - totalLog10 - totalInvestMensuel - totalVie;
             const reste15 = totalRevenusGlobalMensuel - totalLog15 - totalInvestMensuel - totalVie;
             const reste20 = totalRevenusGlobalMensuel - totalLog20 - totalInvestMensuel - totalVie;
@@ -1574,49 +1545,58 @@
             abonnementsVie.forEach(abo => {
                 if (cfg.possedeImmo) {
                     abosHtml += `<tr>
-                        <td>&nbsp;&nbsp;↳ ${abo.nom}</td>
-                        <td class="${dureeBilanImmo===10?'selected-loan-col':''}">-${abo.montant.toFixed(2)} €</td>
-                        <td class="${dureeBilanImmo===15?'selected-loan-col':''}">-${abo.montant.toFixed(2)} €</td>
-                        <td class="${dureeBilanImmo===20?'selected-loan-col':''}">-${abo.montant.toFixed(2)} €</td>
-                        <td class="${dureeBilanImmo===25?'selected-loan-col':''}">-${abo.montant.toFixed(2)} €</td>
-                        <td class="${dureeBilanImmo===30?'selected-loan-col':''}">-${abo.montant.toFixed(2)} €</td>
+                        <td style="padding-left: 20px; color: #cbd5e1; font-size: 11px;">↳ ${abo.nom}</td>
+                        <td class="${dureeBilanImmo===10?'selected-loan-col':''}" style="color: #cbd5e1;">-${abo.montant.toFixed(2)} €</td>
+                        <td class="${dureeBilanImmo===15?'selected-loan-col':''}" style="color: #cbd5e1;">-${abo.montant.toFixed(2)} €</td>
+                        <td class="${dureeBilanImmo===20?'selected-loan-col':''}" style="color: #cbd5e1;">-${abo.montant.toFixed(2)} €</td>
+                        <td class="${dureeBilanImmo===25?'selected-loan-col':''}" style="color: #cbd5e1;">-${abo.montant.toFixed(2)} €</td>
+                        <td class="${dureeBilanImmo===30?'selected-loan-col':''}" style="color: #cbd5e1;">-${abo.montant.toFixed(2)} €</td>
                     </tr>`;
                 } else {
-                    abosHtml += `<tr><td>&nbsp;&nbsp;↳ ${abo.nom}</td><td>-${abo.montant.toFixed(2)} €</td></tr>`;
+                    abosHtml += `<tr>
+                        <td style="padding-left: 20px; color: #cbd5e1; font-size: 11px;">↳ ${abo.nom}</td>
+                        <td style="color: #cbd5e1;">-${abo.montant.toFixed(2)} €</td>
+                    </tr>`;
                 }
             });
 
-            let fluxComptesDispoHtml = `<tr style="background:var(--table-header); color:var(--text-title); font-weight:bold;"><td colspan="${cfg.possedeImmo ? 6 : 2}">📂 Comptes Disponibles (Versements)</td></tr>`;
+            let comptesDispoDetailsHtml = '';
             comptesDispo.forEach(c => {
                 let v = c.versementMensuel || 0;
                 if (cfg.possedeImmo) {
-                    fluxComptesDispoHtml += `<tr>
-                        <td>&nbsp;&nbsp;↳ ${c.nom}</td>
-                        <td class="${dureeBilanImmo===10?'selected-loan-col':''}">-${v.toFixed(2)} €</td>
-                        <td class="${dureeBilanImmo===15?'selected-loan-col':''}">-${v.toFixed(2)} €</td>
-                        <td class="${dureeBilanImmo===20?'selected-loan-col':''}">-${v.toFixed(2)} €</td>
-                        <td class="${dureeBilanImmo===25?'selected-loan-col':''}">-${v.toFixed(2)} €</td>
-                        <td class="${dureeBilanImmo===30?'selected-loan-col':''}">-${v.toFixed(2)} €</td>
+                    comptesDispoDetailsHtml += `<tr>
+                        <td style="padding-left: 20px; color: #cbd5e1; font-size: 11px;">↳ ${c.nom}</td>
+                        <td class="${dureeBilanImmo===10?'selected-loan-col':''}" style="color: #cbd5e1;">-${v.toFixed(2)} €</td>
+                        <td class="${dureeBilanImmo===15?'selected-loan-col':''}" style="color: #cbd5e1;">-${v.toFixed(2)} €</td>
+                        <td class="${dureeBilanImmo===20?'selected-loan-col':''}" style="color: #cbd5e1;">-${v.toFixed(2)} €</td>
+                        <td class="${dureeBilanImmo===25?'selected-loan-col':''}" style="color: #cbd5e1;">-${v.toFixed(2)} €</td>
+                        <td class="${dureeBilanImmo===30?'selected-loan-col':''}" style="color: #cbd5e1;">-${v.toFixed(2)} €</td>
                     </tr>`;
                 } else {
-                    fluxComptesDispoHtml += `<tr><td>&nbsp;&nbsp;↳ ${c.nom}</td><td>-${v.toFixed(2)} €</td></tr>`;
+                    comptesDispoDetailsHtml += `<tr>
+                        <td style="padding-left: 20px; color: #cbd5e1; font-size: 11px;">↳ ${c.nom}</td>
+                        <td style="color: #cbd5e1;">-${v.toFixed(2)} €</td>
+                    </tr>`;
                 }
             });
 
-            let fluxPlacementsBloquesHtml = `<tr style="background:var(--table-header); color:var(--text-title); font-weight:bold;"><td colspan="${cfg.possedeImmo ? 6 : 2}">🔒 Placements Bloqués (Versements)</td></tr>`;
+            let placementsBloquesDetailsHtml = '';
             placementsBloques.forEach(p => {
                 let v = p.versementMensuel || 0;
                 if (cfg.possedeImmo) {
-                    fluxPlacementsBloquesHtml += `<tr>
-                        <td>&nbsp;&nbsp;↳ ${p.nom}</td>
-                        <td class="${dureeBilanImmo===10?'selected-loan-col':''}">-${v.toFixed(2)} €</td>
-                        <td class="${dureeBilanImmo===15?'selected-loan-col':''}">-${v.toFixed(2)} €</td>
-                        <td class="${dureeBilanImmo===20?'selected-loan-col':''}">-${v.toFixed(2)} €</td>
-                        <td class="${dureeBilanImmo===25?'selected-loan-col':''}">-${v.toFixed(2)} €</td>
-                        <td class="${dureeBilanImmo===30?'selected-loan-col':''}">-${v.toFixed(2)} €</td>
+                    placementsBloquesDetailsHtml += `<tr>
+                        <td style="padding-left: 20px; color: #cbd5e1; font-size: 11px;">↳ ${p.nom}</td>
+                        <td class="${dureeBilanImmo===10?'selected-loan-col':''}" style="color: #cbd5e1;">-${v.toFixed(2)} €</td>
+                        <td class="${dureeBilanImmo===15?'selected-loan-col':''}" style="color: #cbd5e1;">-${v.toFixed(2)} €</td>
+                        <td class="${dureeBilanImmo===20?'selected-loan-col':''}" style="color: #cbd5e1;">-${v.toFixed(2)} €</td>
+                        <td class="${dureeBilanImmo===25?'selected-loan-col':''}" style="color: #cbd5e1;">-${v.toFixed(2)} €</td>
+                        <td class="${dureeBilanImmo===30?'selected-loan-col':''}" style="color: #cbd5e1;">-${v.toFixed(2)} €</td>
                     </tr>`;
                 } else {
-                    fluxPlacementsBloquesHtml += `<tr><td>&nbsp;&nbsp;↳ ${p.nom}</td><td>-${v.toFixed(2)} €</td></tr>`;
+                    placementsBloquesDetailsHtml += `<tr>
+                        <td style="padding-left: 20px; color: #cbd5e1; font-size: 11px;">↳ ${p.nom}</td>
+                        <td style="color: #cbd5e1;">-${v.toFixed(2)} €</td>
+                    </tr>`;
                 }
             });
 
@@ -1639,10 +1619,107 @@
             `;
 
             if (modeActuel === 'proprietaire') {
-                content.innerHTML = `
-                    ${formHtml}
+                let partsProj = cfg.dateDebutProjet.split('-');
+                let anProj = parseInt(partsProj[0]) || 2026;
+                let moisProj = parseInt(partsProj[1]) || 8;
+                let estDansFutur = (anProj > 2026) || (anProj === 2026 && moisProj > 8);
+
+                let tableauxFluxHtml = '';
+                let lignesCreditDetailsHtml = '';
+                if (cfg.possedeImmo) {
+                    lignesCreditDetailsHtml = `
+                        <tr>
+                            <td style="padding-left: 20px; color: #cbd5e1; font-size: 11px;">↳ Taux de base crédit</td>
+                            <td class="${dureeBilanImmo===10?'selected-loan-col':''}" style="color: #cbd5e1;">-${m10.toFixed(2)} €</td>
+                            <td class="${dureeBilanImmo===15?'selected-loan-col':''}" style="color: #cbd5e1;">-${m15.toFixed(2)} €</td>
+                            <td class="${dureeBilanImmo===20?'selected-loan-col':''}" style="color: #cbd5e1;">-${m20.toFixed(2)} €</td>
+                            <td class="${dureeBilanImmo===25?'selected-loan-col':''}" style="color: #cbd5e1;">-${m25.toFixed(2)} €</td>
+                            <td class="${dureeBilanImmo===30?'selected-loan-col':''}" style="color: #cbd5e1;">-${m30.toFixed(2)} €</td>
+                        </tr>
+                        <tr>
+                            <td style="padding-left: 20px; color: #cbd5e1; font-size: 11px;">↳ Assurance emprunteur</td>
+                            <td class="${dureeBilanImmo===10?'selected-loan-col':''}" style="color: #cbd5e1;">-${assuranceMensuelle.toFixed(2)} €</td>
+                            <td class="${dureeBilanImmo===15?'selected-loan-col':''}" style="color: #cbd5e1;">-${assuranceMensuelle.toFixed(2)} €</td>
+                            <td class="${dureeBilanImmo===20?'selected-loan-col':''}" style="color: #cbd5e1;">-${assuranceMensuelle.toFixed(2)} €</td>
+                            <td class="${dureeBilanImmo===25?'selected-loan-col':''}" style="color: #cbd5e1;">-${assuranceMensuelle.toFixed(2)} €</td>
+                            <td class="${dureeBilanImmo===30?'selected-loan-col':''}" style="color: #cbd5e1;">-${assuranceMensuelle.toFixed(2)} €</td>
+                        </tr>
+                        <tr>
+                            <td style="padding-left: 20px; color: #cbd5e1; font-size: 11px;">↳ Charges de copropriété</td>
+                            <td class="${dureeBilanImmo===10?'selected-loan-col':''}" style="color: #cbd5e1;">-${cfg.copro.toFixed(2)} €</td>
+                            <td class="${dureeBilanImmo===15?'selected-loan-col':''}" style="color: #cbd5e1;">-${cfg.copro.toFixed(2)} €</td>
+                            <td class="${dureeBilanImmo===20?'selected-loan-col':''}" style="color: #cbd5e1;">-${cfg.copro.toFixed(2)} €</td>
+                            <td class="${dureeBilanImmo===25?'selected-loan-col':''}" style="color: #cbd5e1;">-${cfg.copro.toFixed(2)} €</td>
+                            <td class="${dureeBilanImmo===30?'selected-loan-col':''}" style="color: #cbd5e1;">-${cfg.copro.toFixed(2)} €</td>
+                        </tr>
+                        <tr>
+                            <td style="padding-left: 20px; color: #cbd5e1; font-size: 11px;">↳ Taxe foncière (lissé/mois)</td>
+                            <td class="${dureeBilanImmo===10?'selected-loan-col':''}" style="color: #cbd5e1;">-${cfg.taxe.toFixed(2)} €</td>
+                            <td class="${dureeBilanImmo===15?'selected-loan-col':''}" style="color: #cbd5e1;">-${cfg.taxe.toFixed(2)} €</td>
+                            <td class="${dureeBilanImmo===20?'selected-loan-col':''}" style="color: #cbd5e1;">-${cfg.taxe.toFixed(2)} €</td>
+                            <td class="${dureeBilanImmo===25?'selected-loan-col':''}" style="color: #cbd5e1;">-${cfg.taxe.toFixed(2)} €</td>
+                            <td class="${dureeBilanImmo===30?'selected-loan-col':''}" style="color: #cbd5e1;">-${cfg.taxe.toFixed(2)} €</td>
+                        </tr>
+                    `;
+                }
+
+                let titreTableauDemarrage = cfg.possedeImmo ? "📊 Flux Financiers Mensuels (Au démarrage du prêt)" : "📊 Flux Financiers Mensuels";
+
+                if (estDansFutur) {
+                    const totalLogLocataireActuel = cfg.loyerActuel + cfg.internet + cfg.transport;
+                    const resteLocataireActuel = totalRevenusGlobalMensuel - totalLogLocataireActuel - totalInvestMensuel - totalVie;
+
+                    tableauxFluxHtml += `
+                        <div class="card" style="margin-top: 25px; border: 2px dashed var(--text-title);">
+                            <h3 style="margin-top:0; color:var(--text-title); text-transform:uppercase;">📊 Flux Financiers Mensuels (Avant l'obtention du crédit immo comme si on était locataire)</h3>
+                            <div style="font-size: 11px; opacity: 0.8; margin-bottom: 8px;">Projet prévu pour le <b>${cfg.dateDebutProjet}</b> (situation actuelle de locataire en attendant le démarrage).</div>
+                            <div style="overflow-x:auto;">
+                                <table>
+                                    <tr>
+                                        <th>Postes Budgétaires (Situation Actuelle Locataire)</th>
+                                        <th>Montant Mensuel</th>
+                                    </tr>
+                                    <tr>
+                                        <td><b>(+) Total Revenus Nets (Salaires + Aides)</b></td>
+                                        <td style="color:#4ade80;">+${totalRevenusGlobalMensuel.toFixed(2)} €</td>
+                                    </tr>
+                                    <tr>
+                                        <td><b>(-) Logement / Loyer & Charges Fixes</b></td>
+                                        <td style="color:#f87171;">-${totalLogLocataireActuel.toFixed(2)} €</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding-left: 10px; color: #cbd5e1;">↳ Loyer Actuel</td>
+                                        <td style="color:#f87171;">-${cfg.loyerActuel.toFixed(2)} €</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding-left: 10px; color: #cbd5e1;">↳ Abonnement Internet</td>
+                                        <td style="color:#f87171;">-${cfg.internet.toFixed(2)} €</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding-left: 10px; color: #cbd5e1;">↳ Transport</td>
+                                        <td style="color:#f87171;">-${cfg.transport.toFixed(2)} €</td>
+                                    </tr>
+                                    <tr>
+                                        <td><b>(-) Investissements & Épargne (Comptes & Placements)</b></td>
+                                        <td style="color:#f87171;">-${totalInvestMensuel.toFixed(2)} €</td>
+                                    </tr>
+                                    <tr>
+                                        <td><b>(-) Vie Quotidienne (Courses, Loisirs, Abos)</b></td>
+                                        <td style="color:#f87171;">-${totalVie.toFixed(2)} €</td>
+                                    </tr>
+                                    <tr>
+                                        <td><b>(=) RESTE À VIVRE ACTUEL (Avant Crédit)</b></td>
+                                        <td style="${getResteStyle(resteLocataireActuel, true)}">${resteLocataireActuel.toFixed(2)} €</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                tableauxFluxHtml += `
                     <div class="card" style="margin-top: 25px;">
-                        <h3 style="margin-top:0; color:var(--text-title); text-transform:uppercase;">📊 Flux Financiers Mensuels</h3>
+                        <h3 style="margin-top:0; color:var(--text-title); text-transform:uppercase;">${titreTableauDemarrage}</h3>
                         <div style="overflow-x:auto;">
                             <table>
                                 <tr>
@@ -1652,60 +1729,128 @@
                                 <tr>
                                     <td><b>(+) Total Revenus Nets (Salaires + Aides)</b></td>
                                     ${cfg.possedeImmo ? `
-                                        <td class="${dureeBilanImmo===10?'selected-loan-col':''}">+${totalRevenusGlobalMensuel.toFixed(2)} €</td>
-                                        <td class="${dureeBilanImmo===15?'selected-loan-col':''}">+${totalRevenusGlobalMensuel.toFixed(2)} €</td>
-                                        <td class="${dureeBilanImmo===20?'selected-loan-col':''}">+${totalRevenusGlobalMensuel.toFixed(2)} €</td>
-                                        <td class="${dureeBilanImmo===25?'selected-loan-col':''}">+${totalRevenusGlobalMensuel.toFixed(2)} €</td>
-                                        <td class="${dureeBilanImmo===30?'selected-loan-col':''}">+${totalRevenusGlobalMensuel.toFixed(2)} €</td>
-                                    ` : `<td>+${totalRevenusGlobalMensuel.toFixed(2)} €</td>`}
+                                        <td class="${dureeBilanImmo===10?'selected-loan-col':''}" style="color:#4ade80;">+${totalRevenusGlobalMensuel.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===15?'selected-loan-col':''}" style="color:#4ade80;">+${totalRevenusGlobalMensuel.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===20?'selected-loan-col':''}" style="color:#4ade80;">+${totalRevenusGlobalMensuel.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===25?'selected-loan-col':''}" style="color:#4ade80;">+${totalRevenusGlobalMensuel.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===30?'selected-loan-col':''}" style="color:#4ade80;">+${totalRevenusGlobalMensuel.toFixed(2)} €</td>
+                                    ` : `<td style="color:#4ade80;">+${totalRevenusGlobalMensuel.toFixed(2)} €</td>`}
                                 </tr>
                                 <tr>
-                                    <td><b>(-) Logement / Crédit</b></td>
+                                    <td><b>(-) Logement / Crédit & Charges Fixes</b></td>
                                     ${cfg.possedeImmo ? `
-                                        <td class="${dureeBilanImmo===10?'selected-loan-col':''}">-${totalLog10.toFixed(2)} €</td>
-                                        <td class="${dureeBilanImmo===15?'selected-loan-col':''}">-${totalLog15.toFixed(2)} €</td>
-                                        <td class="${dureeBilanImmo===20?'selected-loan-col':''}">-${totalLog20.toFixed(2)} €</td>
-                                        <td class="${dureeBilanImmo===25?'selected-loan-col':''}">-${totalLog25.toFixed(2)} €</td>
-                                        <td class="${dureeBilanImmo===30?'selected-loan-col':''}">-${totalLog30.toFixed(2)} €</td>
-                                    ` : `<td>-${totalLog10.toFixed(2)} €</td>`}
+                                        <td class="${dureeBilanImmo===10?'selected-loan-col':''}" style="color:#f87171;">-${totalLog10.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===15?'selected-loan-col':''}" style="color:#f87171;">-${totalLog15.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===20?'selected-loan-col':''}" style="color:#f87171;">-${totalLog20.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===25?'selected-loan-col':''}" style="color:#f87171;">-${totalLog25.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===30?'selected-loan-col':''}" style="color:#f87171;">-${totalLog30.toFixed(2)} €</td>
+                                    ` : `<td style="color:#f87171;">-${totalLog10.toFixed(2)} €</td>`}
+                                </tr>
+                                ${cfg.possedeImmo ? `
+                                <tr>
+                                    <td style="padding-left: 10px; color: var(--text-title);"><b>↳ Montant Prêt: ${capitalEmprunte.toFixed(0)}€ en TAEG ${cfg.taeg}%</b></td>
+                                    <td class="${dureeBilanImmo===10?'selected-loan-col':''}" style="color:#f87171;">-${logBase10.toFixed(2)} €</td>
+                                    <td class="${dureeBilanImmo===15?'selected-loan-col':''}" style="color:#f87171;">-${logBase15.toFixed(2)} €</td>
+                                    <td class="${dureeBilanImmo===20?'selected-loan-col':''}" style="color:#f87171;">-${logBase20.toFixed(2)} €</td>
+                                    <td class="${dureeBilanImmo===25?'selected-loan-col':''}" style="color:#f87171;">-${logBase25.toFixed(2)} €</td>
+                                    <td class="${dureeBilanImmo===30?'selected-loan-col':''}" style="color:#f87171;">-${logBase30.toFixed(2)} €</td>
+                                </tr>
+                                ${lignesCreditDetailsHtml}
+                                ` : `
+                                <tr>
+                                    <td style="padding-left: 10px; color: #cbd5e1;">↳ Loyer Actuel</td>
+                                    <td style="color:#f87171;">-${cfg.loyerActuel.toFixed(2)} €</td>
+                                </tr>
+                                `}
+                                <tr>
+                                    <td style="padding-left: 10px; color: #cbd5e1;">↳ Abonnement Internet</td>
+                                    ${cfg.possedeImmo ? `
+                                        <td class="${dureeBilanImmo===10?'selected-loan-col':''}" style="color:#f87171;">-${cfg.internet.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===15?'selected-loan-col':''}" style="color:#f87171;">-${cfg.internet.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===20?'selected-loan-col':''}" style="color:#f87171;">-${cfg.internet.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===25?'selected-loan-col':''}" style="color:#f87171;">-${cfg.internet.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===30?'selected-loan-col':''}" style="color:#f87171;">-${cfg.internet.toFixed(2)} €</td>
+                                    ` : `<td style="color:#f87171;">-${cfg.internet.toFixed(2)} €</td>`}
                                 </tr>
                                 <tr>
-                                    <td><b>(-) Investissements & Épargne</b></td>
+                                    <td style="padding-left: 10px; color: #cbd5e1;">↳ Transport</td>
                                     ${cfg.possedeImmo ? `
-                                        <td class="${dureeBilanImmo===10?'selected-loan-col':''}">-${totalInvestMensuel.toFixed(2)} €</td>
-                                        <td class="${dureeBilanImmo===15?'selected-loan-col':''}">-${totalInvestMensuel.toFixed(2)} €</td>
-                                        <td class="${dureeBilanImmo===20?'selected-loan-col':''}">-${totalInvestMensuel.toFixed(2)} €</td>
-                                        <td class="${dureeBilanImmo===25?'selected-loan-col':''}">-${totalInvestMensuel.toFixed(2)} €</td>
-                                        <td class="${dureeBilanImmo===30?'selected-loan-col':''}">-${totalInvestMensuel.toFixed(2)} €</td>
-                                    ` : `<td>-${totalInvestMensuel.toFixed(2)} €</td>`}
+                                        <td class="${dureeBilanImmo===10?'selected-loan-col':''}" style="color:#f87171;">-${cfg.transport.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===15?'selected-loan-col':''}" style="color:#f87171;">-${cfg.transport.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===20?'selected-loan-col':''}" style="color:#f87171;">-${cfg.transport.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===25?'selected-loan-col':''}" style="color:#f87171;">-${cfg.transport.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===30?'selected-loan-col':''}" style="color:#f87171;">-${cfg.transport.toFixed(2)} €</td>
+                                    ` : `<td style="color:#f87171;">-${cfg.transport.toFixed(2)} €</td>`}
                                 </tr>
                                 <tr>
-                                    <td><b>(-) Vie Quotidienne & Loisirs</b></td>
+                                    <td><b>(-) Investissements & Épargne (Comptes & Placements)</b></td>
                                     ${cfg.possedeImmo ? `
-                                        <td class="${dureeBilanImmo===10?'selected-loan-col':''}">-${totalVie.toFixed(2)} €</td>
-                                        <td class="${dureeBilanImmo===15?'selected-loan-col':''}">-${totalVie.toFixed(2)} €</td>
-                                        <td class="${dureeBilanImmo===20?'selected-loan-col':''}">-${totalVie.toFixed(2)} €</td>
-                                        <td class="${dureeBilanImmo===25?'selected-loan-col':''}">-${totalVie.toFixed(2)} €</td>
-                                        <td class="${dureeBilanImmo===30?'selected-loan-col':''}">-${totalVie.toFixed(2)} €</td>
-                                    ` : `<td>-${totalVie.toFixed(2)} €</td>`}
+                                        <td class="${dureeBilanImmo===10?'selected-loan-col':''}" style="color:#f87171;">-${totalInvestMensuel.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===15?'selected-loan-col':''}" style="color:#f87171;">-${totalInvestMensuel.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===20?'selected-loan-col':''}" style="color:#f87171;">-${totalInvestMensuel.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===25?'selected-loan-col':''}" style="color:#f87171;">-${totalInvestMensuel.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===30?'selected-loan-col':''}" style="color:#f87171;">-${totalInvestMensuel.toFixed(2)} €</td>
+                                    ` : `<td style="color:#f87171;">-${totalInvestMensuel.toFixed(2)} €</td>`}
+                                </tr>
+                                ${comptesDispoDetailsHtml}
+                                ${placementsBloquesDetailsHtml}
+                                <tr>
+                                    <td><b>(-) Vie Quotidienne (Courses, Loisirs, Abos)</b></td>
+                                    ${cfg.possedeImmo ? `
+                                        <td class="${dureeBilanImmo===10?'selected-loan-col':''}" style="color:#f87171;">-${(totalVie).toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===15?'selected-loan-col':''}" style="color:#f87171;">-${(totalVie).toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===20?'selected-loan-col':''}" style="color:#f87171;">-${(totalVie).toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===25?'selected-loan-col':''}" style="color:#f87171;">-${(totalVie).toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===30?'selected-loan-col':''}" style="color:#f87171;">-${(totalVie).toFixed(2)} €</td>
+                                    ` : `<td style="color:#f87171;">-${(totalVie).toFixed(2)} €</td>`}
+                                </tr>
+                                <tr>
+                                    <td style="padding-left: 10px; color: #cbd5e1;">↳ Courses / Alimentation</td>
+                                    ${cfg.possedeImmo ? `
+                                        <td class="${dureeBilanImmo===10?'selected-loan-col':''}" style="color:#f87171;">-${cfg.courses.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===15?'selected-loan-col':''}" style="color:#f87171;">-${cfg.courses.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===20?'selected-loan-col':''}" style="color:#f87171;">-${cfg.courses.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===25?'selected-loan-col':''}" style="color:#f87171;">-${cfg.courses.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===30?'selected-loan-col':''}" style="color:#f87171;">-${cfg.courses.toFixed(2)} €</td>
+                                    ` : `<td style="color:#f87171;">-${cfg.courses.toFixed(2)} €</td>`}
+                                </tr>
+                                <tr>
+                                    <td style="padding-left: 10px; color: #cbd5e1;">↳ Loisirs / Sorties</td>
+                                    ${cfg.possedeImmo ? `
+                                        <td class="${dureeBilanImmo===10?'selected-loan-col':''}" style="color:#f87171;">-${cfg.loisirs.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===15?'selected-loan-col':''}" style="color:#f87171;">-${cfg.loisirs.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===20?'selected-loan-col':''}" style="color:#f87171;">-${cfg.loisirs.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===25?'selected-loan-col':''}" style="color:#f87171;">-${cfg.loisirs.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===30?'selected-loan-col':''}" style="color:#f87171;">-${cfg.loisirs.toFixed(2)} €</td>
+                                    ` : `<td style="color:#f87171;">-${cfg.loisirs.toFixed(2)} €</td>`}
+                                </tr>
+                                <tr>
+                                    <td style="padding-left: 10px; color: #cbd5e1;">↳ Abonnements récurrents</td>
+                                    ${cfg.possedeImmo ? `
+                                        <td class="${dureeBilanImmo===10?'selected-loan-col':''}" style="color:#f87171;">-${totalAbosCalcul.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===15?'selected-loan-col':''}" style="color:#f87171;">-${totalAbosCalcul.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===20?'selected-loan-col':''}" style="color:#f87171;">-${totalAbosCalcul.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===25?'selected-loan-col':''}" style="color:#f87171;">-${totalAbosCalcul.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===30?'selected-loan-col':''}" style="color:#f87171;">-${totalAbosCalcul.toFixed(2)} €</td>
+                                    ` : `<td style="color:#f87171;">-${totalAbosCalcul.toFixed(2)} €</td>`}
                                 </tr>
                                 ${abosHtml}
-                                ${fluxComptesDispoHtml}
-                                ${fluxPlacementsBloquesHtml}
-                                <tr style="border-top:2px solid var(--border-color);">
+                                <tr>
                                     <td><b>(=) RESTE À VIVRE MENSUEL</b></td>
                                     ${cfg.possedeImmo ? `
-                                        <td style="${getResteStyle(reste10, dureeBilanImmo===10)}" class="${dureeBilanImmo===10?'selected-loan-col':''}">${reste10.toFixed(2)} €</td>
-                                        <td style="${getResteStyle(reste15, dureeBilanImmo===15)}" class="${dureeBilanImmo===15?'selected-loan-col':''}">${reste15.toFixed(2)} €</td>
-                                        <td style="${getResteStyle(reste20, dureeBilanImmo===20)}" class="${dureeBilanImmo===20?'selected-loan-col':''}">${reste20.toFixed(2)} €</td>
-                                        <td style="${getResteStyle(reste25, dureeBilanImmo===25)}" class="${dureeBilanImmo===25?'selected-loan-col':''}">${reste25.toFixed(2)} €</td>
-                                        <td style="${getResteStyle(reste30, dureeBilanImmo===30)}" class="${dureeBilanImmo===30?'selected-loan-col':''}">${reste30.toFixed(2)} €</td>
-                                    ` : `<td style="${getResteStyle(reste10, true)}">${reste10.toFixed(2)} €</td>`}
+                                        <td class="${dureeBilanImmo===10?'selected-loan-col':''}" style="${getResteStyle(reste10, dureeBilanImmo===10)}">${reste10.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===15?'selected-loan-col':''}" style="${getResteStyle(reste15, dureeBilanImmo===15)}">${reste15.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===20?'selected-loan-col':''}" style="${getResteStyle(reste20, dureeBilanImmo===20)}">${reste20.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===25?'selected-loan-col':''}" style="${getResteStyle(reste25, dureeBilanImmo===25)}">${reste25.toFixed(2)} €</td>
+                                        <td class="${dureeBilanImmo===30?'selected-loan-col':''}" style="${getResteStyle(reste30, dureeBilanImmo===30)}">${reste30.toFixed(2)} €</td>
+                                    ` : `<td style="${getResteStyle(reste20, true)}">${reste20.toFixed(2)} €</td>`}
                                 </tr>
                             </table>
                         </div>
                     </div>
                 `;
+
+                content.innerHTML = formHtml + tableauxFluxHtml;
             } else {
                 content.innerHTML = projetHtml;
             }
