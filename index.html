@@ -186,6 +186,19 @@
             font-weight: bold;
             transition: all 0.2s;
         }
+
+        /* STYLES SPÉCIFIQUES POUR L'IMPRESSION / PDF */
+        @media print {
+            body { background: #ffffff !important; color: #000000 !important; font-size: 13px; }
+            .container { max-width: 100% !important; background: #ffffff !important; border: none !important; box-shadow: none !important; padding: 0 !important; }
+            .main-tabs-container, .couple-tab-container, #auth-banner, #tuto-bulles-container-1, #tuto-bulles-container-2, .action-btn, button { display: none !important; }
+            .card, .form-section-card { background: #ffffff !important; border: 1px solid #cbd5e1 !important; color: #000000 !important; box-shadow: none !important; margin-bottom: 20px !important; page-break-inside: avoid; }
+            h1, h2, h3, b { color: #000000 !important; text-shadow: none !important; }
+            table { background: #ffffff !important; }
+            th, td { color: #000000 !important; border-bottom: 1px solid #cbd5e1 !important; }
+            th { background: #f1f5f9 !important; }
+            .pdf-page-break { page-break-before: always; }
+        }
     </style>
 </head>
 <body>
@@ -212,7 +225,7 @@
                     <button type="button" onclick="changerTheme('dark')" style="background:#000000; color:#a1a1aa; border:1px solid #333;" title="Très Dark">🌑 Very Dark</button>
                     <button type="button" onclick="changerTheme('mystery')" style="background:linear-gradient(45deg, #ff00ff, #00ff66); color:#000; text-shadow:0 0 2px #fff;" title="Mystery Theme">🌀 Mystery</button>
                 </div>
-                <div class="neon-title">Simulateur_AntiGalère_V0.1.8</div>
+                <div class="neon-title">Simulateur_AntiGalère_V0.1.9</div>
             </div>
         </div>
 
@@ -816,6 +829,216 @@
             alert(`✅ Date de début du projet mise à jour : ${cfg.dateDebutProjet}`);
         }
 
+        function exporterBilanPedagogiquePDF() {
+            synchroniserDonneesDynamiques();
+            
+            // Calculs globaux pour le résumé
+            let brutTotal = cfg.salaireBrut + cfg.primeAnciennete;
+            let netAvantPas = brutTotal * 0.78; 
+            let salaireNetCalc = netAvantPas * (1 - (cfg.tauxPas / 100));
+            let aplAuto = cfg.saisieAplManuelle >= 0 ? cfg.saisieAplManuelle : 0;
+            if (cfg.saisieAplManuelle < 0 && cfg.loyerActuel > 0) {
+                let baseApl = Math.max(0, cfg.loyerActuel * 0.35 - (salaireNetCalc + cfg.caMicro) * 0.08);
+                aplAuto = Math.min(350, Math.max(0, baseApl));
+            }
+            let primeActAuto = cfg.saisiePrimeActivitéManuelle >= 0 ? cfg.saisiePrimeActivitéManuelle : 0;
+            if (cfg.saisiePrimeActivitéManuelle < 0) {
+                let revProfFoyer = salaireNetCalc + (cfg.caMicro > 0 ? cfg.caMicro / 12 * 0.7 : 0);
+                if (revProfFoyer > 0 && revProfFoyer <= 2100) {
+                    let ppaBrute = 638 + (revProfFoyer * 0.5985) - (revProfFoyer * 0.75);
+                    primeActAuto = Math.max(0, Math.min(300, ppaBrute));
+                }
+            }
+            let totalRevenusGlobalMensuel = salaireNetCalc + aplAuto + primeActAuto;
+
+            let totalInvestMensuel = comptesDispo.reduce((acc, c) => acc + (c.versementMensuel || 0), 0) +
+                                     placementsBloques.reduce((acc, p) => acc + (p.versementMensuel || 0), 0);
+            let totalAbosCalcul = abonnementsVie.reduce((acc, a) => acc + a.montant, 0);
+            let totalVie = cfg.courses + cfg.loisirs + totalAbosCalcul;
+            let totalChargesFixes = cfg.loyerActuel + cfg.internet + cfg.transport;
+            let resteAVivre = totalRevenusGlobalMensuel - totalChargesFixes - totalInvestMensuel - totalVie;
+
+            let totalDispoBrut = comptesDispo.reduce((acc, c) => acc + c.solde, 0);
+            let totalDispo = totalDispoBrut - cfg.depenseFuturMontant;
+            let totalBloque = placementsBloques.reduce((acc, p) => acc + p.solde, 0);
+            let totalPatrimoineSupp = patrimoineSupplementaire.reduce((acc, item) => acc + item.valeur, 0);
+
+            let fraisNotairesCalculés = cfg.prixAnnonce * (cfg.fraisNotaireTaux / 100);
+            let coutTotalProjetBase = cfg.prixAnnonce + fraisNotairesCalculés + cfg.travaux;
+            let capitalEmprunte = Math.max(0, (cfg.montantProjet > 0 ? cfg.montantProjet : coutTotalProjetBase) - cfg.apport);
+            let mensualiteCredit = calculerPret(capitalEmprunte, cfg.taeg, dureeBilanImmo);
+
+            // Simulation d'épargne future sur les comptes/placements (ex: jalons 1, 3, 5, 10 ans)
+            const calculerFuturCompte = (soldeActuel, versementPerso, versementExterne, tauxAnnuel, annees) => {
+                let r = tauxAnnuel / 100 / 12;
+                let n = annees * 12;
+                let total = soldeActuel * Math.pow(1 + r, n);
+                let versementTotalMensuel = versementPerso + versementExterne;
+                for (let i = 0; i < n; i++) {
+                    total += versementTotalMensuel * Math.pow(1 + r, n - i);
+                }
+                return total;
+            };
+
+            let epargneFuture1An = 0;
+            let epargneFuture5Ans = 0;
+            let epargneFuture10Ans = 0;
+            let tousPlacements = [...comptesDispo, ...placementsBloques];
+            tousPlacements.forEach(p => {
+                let s = p.solde;
+                if (p.nom === cfg.depenseFuturCompteCible) s = Math.max(0, s - cfg.depenseFuturMontant);
+                epargneFuture1An += calculerFuturCompte(s, p.versementMensuel || 0, p.virementExterne || 0, p.rendement, 1);
+                epargneFuture5Ans += calculerFuturCompte(s, p.versementMensuel || 0, p.virementExterne || 0, p.rendement, 5);
+                epargneFuture10Ans += calculerFuturCompte(s, p.versementMensuel || 0, p.virementExterne || 0, p.rendement, 10);
+            });
+
+            // Calcul des dates d'apport si projet immo actif
+            let infoApportTexte = "";
+            let infoCreditFinTexte = "";
+            if (cfg.possedeImmo) {
+                let epargneDispoActuelle = 0;
+                comptesDispo.forEach(c => {
+                    let soldeCompte = c.solde;
+                    if (c.nom === cfg.depenseFuturCompteCible) soldeCompte = Math.max(0, c.solde - cfg.depenseFuturMontant);
+                    epargneDispoActuelle += soldeCompte;
+                });
+                let totalChargesVieActuelles = cfg.loyerActuel + cfg.internet + cfg.transport + cfg.courses + cfg.loisirs + totalAbosCalcul;
+                let capaciteEpargneActuelleLocataire = totalRevenusGlobalMensuel - totalChargesVieActuelles;
+                let objectifApport = cfg.apport;
+                let manquantApport = Math.max(0, objectifApport - epargneDispoActuelle);
+                let moisApport = manquantApport > 0 && capaciteEpargneActuelleLocataire > 0 ? Math.ceil(manquantApport / capaciteEpargneActuelleLocataire) : 0;
+                
+                let moisNomsComplets = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+                let totalMoisCibleApport = (8 - 1) + moisApport;
+                let anneeCibleApport = 2026 + Math.floor(totalMoisCibleApport / 12);
+                let moisCibleApportIdx = totalMoisCibleApport % 12;
+                let dateApportStr = `${moisNomsComplets[moisCibleApportIdx]} ${anneeCibleApport}`;
+
+                // Date de fin du crédit
+                let partsDateProj = cfg.dateDebutProjet.split('-');
+                let anneeDebutCr = parseInt(partsDateProj[0]) || 2027;
+                let moisDebutCr = parseInt(partsDateProj[1]) || 8;
+                let totalMoisFinCr = (moisDebutCr - 1) + (dureeBilanImmo * 12);
+                let anneeFinCr = anneeDebutCr + Math.floor(totalMoisFinCr / 12);
+                let moisFinCrIdx = totalMoisFinCr % 12;
+                let dateFinCrStr = `${moisNomsComplets[moisFinCrIdx]} ${anneeFinCr}`;
+
+                infoApportTexte = `• <b>Atteinte de l'apport :</b> En cumulant votre épargne disponible actuelle et votre capacité d'épargne mensuelle (${capaciteEpargneActuelleLocataire.toFixed(2)} €/mois), vous aurez atteint votre apport de <b>${objectifApport.toFixed(2)} €</b> estimé vers <b>${dateApportStr}</b>.`;
+                infoCreditFinTexte = `• <b>Fin du crédit immobilier :</b> Si votre crédit commence en <b>${cfg.dateDebutProjet}</b> pour une durée de <b>${dureeBilanImmo} ans</b>, vous aurez fini de le payer en <b>${dateFinCrStr}</b>.`;
+            }
+
+            let valeurImmoEstimee = 0;
+            if (cfg.possedeImmo) {
+                let partsDate = cfg.dateDebutProjet.split('-');
+                let anneeDebutImmo = parseInt(partsDate[0]) || 2027;
+                let moisDebutImmo = parseInt(partsDate[1]) || 8;
+                let diffMoisActuel = (2026 - anneeDebutImmo) * 12 + (8 - moisDebutImmo);
+                let rM = cfg.taeg / 100 / 12;
+                let capRestant = capitalEmprunte;
+                let capitalRembourseInstantT = 0;
+                for(let mIdx = 0; mIdx < Math.max(0, diffMoisActuel); mIdx++) {
+                    let interetsMois = capRestant * rM;
+                    let partAmortissement = mensualiteCredit - interetsMois;
+                    capitalRembourseInstantT += partAmortissement;
+                    capRestant -= partAmortissement;
+                }
+                let anneesEcoulees = diffMoisActuel / 12;
+                let valeurBienEstimee = cfg.prixAnnonce * Math.pow(1.015, anneesEcoulees);
+                let capitalRestantDu = Math.max(0, capitalEmprunte - capitalRembourseInstantT);
+                valeurImmoEstimee = Math.max(0, valeurBienEstimee - capitalRestantDu - (valeurBienEstimee * 0.05));
+            }
+
+            let patrimoineTotal = valeurImmoEstimee + totalDispo + totalBloque + totalPatrimoineSupp;
+
+            // HTML dédié à la fenêtre d'impression PDF
+            let pdfWindow = window.open('', '_blank');
+            pdfWindow.document.write(`
+                <!DOCTYPE html>
+                <html lang="fr">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Bilan Patrimonial Pédagogique - App Bank RPG</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; color: #1e293b; padding: 20px; line-height: 1.5; background: #fff; }
+                        h1 { color: #0284c7; text-align: center; border-bottom: 2px solid #0284c7; padding-bottom: 10px; margin-bottom: 20px; font-size: 22px; }
+                        h2 { color: #0f172a; font-size: 16px; margin-top: 25px; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px; }
+                        p { font-size: 13px; margin: 8px 0; }
+                        table { width: 100%; border-collapse: collapse; margin: 10px 0 20px 0; font-size: 12px; }
+                        th, td { border: 1px solid #cbd5e1; padding: 8px 10px; text-align: left; }
+                        th { background: #f1f5f9; color: #0f172a; font-weight: bold; }
+                        .highlight-box { background: #f8fafc; border: 1px solid #cbd5e1; padding: 12px; border-radius: 6px; margin: 15px 0; }
+                        .footer { text-align: center; font-size: 10px; color: #64748b; margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 10px; }
+                    </style>
+                </head>
+                <body>
+                    <h1>📄 Mon Bilan Patrimonial et Financier Expert</h1>
+                    <p style="text-align: center; font-style: italic;">Rapport complet et détaillé généré par le Simulateur App Bank RPG</p>
+
+                    <h2>🌟 1. Résumé Global de Votre Situation & Projets</h2>
+                    <div class="highlight-box">
+                        <p>• <b>Patrimoine Total Estimé :</b> <b style="color: #0284c7; font-size: 1.2em;">${patrimoineTotal.toFixed(2)} €</b> (Valeur cumulée de vos comptes, placements et biens).</p>
+                        <p>• <b>Revenus Mensuels Totaux :</b> <b>${totalRevenusGlobalMensuel.toFixed(2)} € / mois</b> (Salaires et aides).</p>
+                        <p>• <b>Capacité d'Épargne Mensuelle :</b> <b>${totalInvestMensuel.toFixed(2)} € / mois</b> investis et mis de côté.</p>
+                        <p>• <b>Reste à Vivre Réel :</b> <b style="color: ${resteAVivre >= 0 ? '#10b981' : '#ef4444'};">${resteAVivre.toFixed(2)} € / mois</b>.</p>
+                        ${infoApportTexte ? `<p>${infoApportTexte}</p>` : ''}
+                        ${infoCreditFinTexte ? `<p>${infoCreditFinTexte}</p>` : ''}
+                    </div>
+
+                    <h2>📈 2. Projections d'Épargne Future (Intérêts Composés)</h2>
+                    <p>Voici l'évolution estimée de l'ensemble de vos comptes et placements si vous maintenez vos versements actuels :</p>
+                    <table>
+                        <tr><th>Horizon de temps</th><th>Montant estimé (Capital + Intérêts)</th></tr>
+                        <tr><td>Dans 1 an</td><td style="color:#0284c7; font-weight:bold;">${epargneFuture1An.toFixed(2)} €</td></tr>
+                        <tr><td>Dans 5 ans</td><td style="color:#0284c7; font-weight:bold;">${epargneFuture5Ans.toFixed(2)} €</td></tr>
+                        <tr><td>Dans 10 ans</td><td style="color:#10b981; font-weight:bold;">${epargneFuture10Ans.toFixed(2)} €</td></tr>
+                    </table>
+
+                    <h2>💶 3. D'où vient votre argent ? (Entrées)</h2>
+                    <table>
+                        <tr><th>Source de Revenu</th><th>Montant Mensuel</th></tr>
+                        <tr><td>Salaire Net Réel</td><td>${salaireNetCalc.toFixed(2)} €</td></tr>
+                        <tr><td>Aides et Prestations (APL / Prime d'activité)</td><td>${(aplAuto + primeActAuto).toFixed(2)} €</td></tr>
+                    </table>
+
+                    <h2>🛒 4. Où va votre argent ? (Charges & Sorties)</h2>
+                    <table>
+                        <tr><th>Type de Dépense</th><th>Montant Mensuel</th></tr>
+                        <tr><td>Logement (Loyer ou Crédit de base)</td><td>${cfg.possedeImmo ? (mensualiteCredit + cfg.copro + (cfg.taxe/12)).toFixed(2) + ' €' : cfg.loyerActuel.toFixed(2) + ' €'}</td></tr>
+                        <tr><td>Factures & Transports</td><td>${(cfg.internet + cfg.transport).toFixed(2)} €</td></tr>
+                        <tr><td>Vie Quotidienne (Courses, loisirs, abonnements)</td><td>${totalVie.toFixed(2)} €</td></tr>
+                        <tr><td>Épargne & Placements programmés</td><td>${totalInvestMensuel.toFixed(2)} €</td></tr>
+                    </table>
+
+                    <h2>🏦 5. Détail du Patrimoine & Placements Actuels</h2>
+                    <table>
+                        <tr><th>Type d'Actif</th><th>Montant Total</th><th>Description</th></tr>
+                        <tr><td><b>Comptes Disponibles</b></td><td>${totalDispo.toFixed(2)} €</td><td>Liquidités immédiates (Courant, Livret A, LEP).</td></tr>
+                        <tr><td><b>Placements Bloqués</b></td><td>${totalBloque.toFixed(2)} €</td><td>Épargne long terme (PEA, PER, Crypto, PEL).</td></tr>
+                        <tr><td><b>Biens Matériels</b></td><td>${totalPatrimoineSupp.toFixed(2)} €</td><td>Objets de collection ou équipements de valeur.</td></tr>
+                    </table>
+
+                    ${cfg.possedeImmo ? `
+                    <h2>🏡 6. Synthèse de Votre Projet Immobilier</h2>
+                    <div class="highlight-box">
+                        <p>• <b>Bien ciblé :</b> <b>${cfg.prixAnnonce.toFixed(2)} €</b> (Frais de notaire estimés à ${fraisNotairesCalculés.toFixed(2)} €).</p>
+                        <p>• <b>Montant emprunté :</b> <b>${capitalEmprunte.toFixed(2)} €</b> sur <b>${dureeBilanImmo} ans</b> au taux TAEG de <b>${cfg.taeg}%</b>.</p>
+                        <p>• <b>Mensualité du crédit :</b> Environ <b>${mensualiteCredit.toFixed(2)} € / mois</b>.</p>
+                    </div>
+                    ` : ''}
+
+                    <div class="footer">
+                        <p>Document éducatif et indicatif généré par App Bank RPG - Ne constitue pas un conseil financier officiel.</p>
+                    </div>
+                </body>
+                </html>
+            `);
+            pdfWindow.document.close();
+            pdfWindow.focus();
+            setTimeout(() => {
+                pdfWindow.print();
+            }, 500);
+        }
+
         function render() {
             const modeTutoActif = document.getElementById('chk-mode-tuto') ? document.getElementById('chk-mode-tuto').checked : false;
             
@@ -1319,7 +1542,6 @@
                 let bilanImmoDetailsHtml = '';
 
                 if (cfg.possedeImmo) {
-                    // CORRECTION ICI : On prend en compte le solde de TOUS les comptes non bloqués (comptesDispo)
                     let epargneDispoActuelle = 0;
                     comptesDispo.forEach(c => {
                         let soldeCompte = c.solde;
@@ -1538,7 +1760,14 @@
                         <div style="margin-top: 15px;">${blocksProjetHtml}</div>
                     </div>
 
-                    ${bilanImmoDetailsHtml}`;
+                    ${bilanImmoDetailsHtml}
+
+                    <!-- BOUTON EXPORT PDF PÉDAGOGIQUE -->
+                    <div style="text-align: center; margin: 30px 0;">
+                        <button type="button" onclick="exporterBilanPedagogiquePDF()" style="background: #10b981; color: white; border: none; padding: 14px 28px; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4); transition: background 0.2s;">
+                            📥 Exporter en PDF (Bilan Pédagogique)
+                        </button>
+                    </div>`;
             }
 
             let abosHtml = '';
