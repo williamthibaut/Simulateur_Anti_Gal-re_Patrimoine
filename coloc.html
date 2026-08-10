@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>App Bank RPG - Simulateur Colocation & Smart AI Budget Optimizer</title>
+    <style>
+        :root {
+            --bg-body: #0f172a;
+            --bg-container: #1e293b;
+            --text-main: #f8fafc;
+            --text-title: #38bdf8;
+            --border-color: #334155;
+            --card-bg: #0f172a;
+            --input-bg: #1e293b;
+            --table-header: #334155;
+        }
+
+        /* THÈME BLANC LUMINEUX */
+        body.theme-blanc {
+            --bg-body: #f1f5f9;
+            --bg-container: #ffffff;
+            --text-main: #1e293b;
+            --text-title: #0284c7;
+            --border-color: #cbd5e1;
+            --card-bg: #f8fafc;
+            --input-bg: #ffffff;
+            --table-header: #e2e8f0;
+        }
+
+        /* THÈME TRÈS DARK */
+        body.theme-dark {
+            --bg-body: #000000;
+            --bg-container: #09090b;
+            --text-main: #e4e4e7;
+            --text-title: #a1a1aa;
+            --border-color: #27272a;
+            --card-bg: #09090b;
+            --input-bg: #18181b;
+            --table-header: #18181b;
+        }
+
+        /* THÈME MYSTERY THEME */
+        @keyframes mysteryPsyche {
+            0% { filter: hue-rotate(0deg) saturate(150%); }
+            50% { filter: hue-rotate(180deg) saturate(300%); }
+            100% { filter: hue-rotate(360deg) saturate(150%); }
+        }
+        @keyframes matrixNeonGlow {
+            0%, 100% {
+                box-shadow: 0 0 15px #00ff66, inset 0 0 15px #ff007f, 0 0 30px #7928ca;
+                border-color: #00ff66;
+            }
+            33% {
+                box-shadow: 0 0 20px #ff007f, inset 0 0 20px #00ffff, 0 0 40px #ff007f;
+                border-color: #ff007f;
+            }
+            66% {
+                box-shadow: 0 0 25px #00ffff, inset 0 0 25px #00ff66, 0 0 40px #00ffff;
+                border-color: #00ffff;
+            }
+        }
+        body.theme-mystery {
+            --bg-body: #05020a;
+            --bg-container: #0c0414;
+            --text-main: #00ffcc;
+            --text-title: #ff00ff;
+            --border-color: #ff00aa;
+            --card-bg: #12061f;
+            --input-bg: #1c0933;
+            --table-header: #260c4d;
+            animation: mysteryPsyche 10s infinite linear;
+        }
+        body.theme-mystery .container {
+            border: 3px dashed #ff00ff;
+            animation: matrixNeonGlow 3s infinite alternate;
+        }
+        body.theme-mystery h1, body.theme-mystery h2, body.theme-mystery h3 {
+            color: #00ff66 !important;
+            text-shadow: 0 0 8px #ff00ff, 0 0 15px #00ffff;
+        }
+
+        body { font-family: Arial, sans-serif; background: var(--bg-body); color: var(--text-main); margin: 0; padding: 10px; transition: background 0.3s, color 0.3s; position: relative; min-height: 100vh; }
+        .container { max-width: 1400px; margin: auto; background: var(--bg-container); padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); border: 1px solid var(--border-color); }
+        h1, h2, h3 { color: var(--text-title); }
+
+        .main-tabs-container { 
+            display: flex; 
+            gap: 10px; 
+            margin-bottom: 10px; 
+            width: 100%; 
+            position: sticky; 
+            top: 0; 
+            z-index: 1000; 
+            background: var(--bg-container); 
+            padding-top: 5px; 
+            padding-bottom: 5px; 
+        }
+        .main-tabs-container button { flex: 1; padding: 14px 20px; background: var(--table-header); color: var(--text-main); border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; text-transform: uppercase; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .main-tabs-container button:hover { opacity: 0.8; }
+        .main-tabs-container button.active { background: #38bdf8; color: #0f172a; box-shadow: 0 0 12px rgba(56,189,248,0.4); }
+
+        .couple-tab-container { margin-bottom: 20px; width: 100%; text-align: center; display: flex; justify-content: center; gap: 10px; }
+        .couple-tab-container button { padding: 8px 16px; background: var(--bg-container); color: var(--text-title); border: 1px solid #0284c7; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; text-transform: uppercase; transition: all 0.2s; }
+        .couple-tab-container button:hover { background: #0284c7; color: #ffffff; }
+        .couple-tab-container button.active { background: #0284c7; color: #ffffff; border-color: #38bdf8; box-shadow: 0 0 8px rgba(2,132,199,0.4); }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: var(--card-bg); font-size: 12px; }
+        th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border-color); white-space: nowrap; color: var(--text-main); }
+        th { background: var(--table-header); color: var(--text-title); }
+
+        .form-section-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; margin-bottom: 15px; }
+        .form-section-card.coloc2-card { border-color: #7f1d1d; background: var(--card-bg); }
+        .form-section-card.coloc2-card .form-section-title { color: #f87171; border-bottom-color: #7f1d1d; }
+
+        .form-section-title { font-size: 14px; font-weight: bold; color: var(--text-title); margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .form-grid-inner { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+        
+        .form-group label { display: block; font-size: 11px; color: var(--text-main); opacity: 0.8; margin-bottom: 3px; font-weight: bold; }
+        .form-section-card.coloc2-card .form-group label { color: #fca5a5; }
+
+        .input-wrapper { display: flex; align-items: center; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 4px; overflow: hidden; }
+        .coloc2-card .input-wrapper { border-color: #7f1d1d; }
+        .input-wrapper input { background: transparent; border: none; color: var(--text-main); padding: 6px; width: 100%; outline: none; box-sizing: border-box; }
+        .reset-btn { background: transparent; border: none; color: #64748b; padding: 0 8px; cursor: pointer; font-size: 14px; font-weight: bold; }
+        .reset-btn:hover { color: #f87171; }
+        
+        button.action-btn { background: #4f46e5; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; margin-right: 5px; margin-top: 5px; }
+        button.action-btn:hover { background: #4338ca; }
+        button.action-btn.p2-btn { background: #dc2626; }
+        button.action-btn.p2-btn:hover { background: #b91c1c; }
+
+        button.del-btn { background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; }
+        button.del-btn:hover { background: #dc2626; }
+        .card { background: var(--card-bg); padding: 15px; border-radius: 6px; margin-top: 15px; border: 1px solid var(--border-color); color: var(--text-main); }
+        
+        .table-layout-container { display: grid; grid-template-columns: 1fr; gap: 15px; align-items: start; margin-top: 10px; }
+
+        .theme-selector-bar {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            background: rgba(0,0,0,0.2);
+            padding: 5px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+        .theme-selector-bar button {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- ESPACE CONNEXION / COMPTE & THEMES -->
+        <div id="auth-banner" style="background:var(--card-bg); border:1px solid var(--border-color); padding:10px 15px; border-radius:6px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <div style="display:flex; align-items:center; gap:10px; font-size:12px;">
+                <span>👤 Mode Colocataires Indépendants actif</span>
+            </div>
+            
+            <div style="display:flex; align-items:center; gap:15px; margin-left:auto;">
+                <div class="theme-selector-bar">
+                    <span style="font-size:10px; color:var(--text-title);">Thèmes:</span>
+                    <button type="button" onclick="changerTheme('default')" style="background:#334155; color:#fff;" title="Défaut Dark">🌌 Défaut</button>
+                    <button type="button" onclick="changerTheme('blanc')" style="background:#e2e8f0; color:#1e293b;" title="Blanc Lumineux">☀️ Blanc</button>
+                    <button type="button" onclick="changerTheme('dark')" style="background:#000000; color:#a1a1aa; border:1px solid #333;" title="Très Dark">🌑 Very Dark</button>
+                    <button type="button" onclick="changerTheme('mystery')" style="background:linear-gradient(45deg, #ff00ff, #00ff66); color:#000; text-shadow:0 0 2px #fff;" title="Mystery Theme">🌀 Mystery</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ONGLETS PRINCIPAUX + STATUTS -->
+        <div class="main-tabs-container">
+            <button id="btn-proprietaire" onclick="changerMode('proprietaire')">Ressources & Dépenses</button>
+            <button id="btn-projet" onclick="changerMode('projet')">Patrimoine Coloc</button>
+            <button id="btn-ia" onclick="changerMode('ia')" style="background:#0284c7; font-weight:bold;">🤖 Smart AI</button>
+        </div>
+        <div class="couple-tab-container">
+            <button id="btn-celibataire" onclick="changerStatutFoyer('celibataire')">Célibataire</button>
+            <button id="btn-coloc" class="active" onclick="changerStatutFoyer('coloc')">Colocataires</button>
+            <button id="btn-couple" onclick="changerStatutFoyer('couple')">Couple</button>
+        </div>
+
+        <div style="background:var(--card-bg); border:2px solid var(--text-title); padding:15px; border-radius:8px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px; box-shadow:0 0 15px rgba(56,189,248,0.25);">
+            <div>
+                <h1 id="titre-mode" style="margin:0; font-size:1.3rem; color:var(--text-main); text-transform:uppercase;">Ressources & Dépenses (Colocation Indépendante)</h1>
+                <span style="font-size:11px; color:var(--text-main); opacity: 0.7;">Gérez vos flux financiers séparément sans aucun compte ou actif partagé</span>
+            </div>
+        </div>
+        
+        <div id="app-content"></div>
+    </div>
+
+    <script>
+        let modeActuel = 'proprietaire';
+        
+        let cfg = {
+            salaireBrutP1: 2950,
+            primeAncienneteP1: 170,
+            tauxPasP1: 5.7,
+            salaireNetP1: 0,
+            salaireBrutP2: 2500,
+            primeAncienneteP2: 100,
+            tauxPasP2: 4.5,
+            salaireNetP2: 0,
+            loyerP1: 500,
+            loyerP2: 500,
+            internetP1: 20,
+            internetP2: 20,
+            transportP1: 30,
+            transportP2: 30,
+            coursesP1: 200,
+            coursesP2: 200,
+            loisirsP1: 80,
+            loisirsP2: 80,
+            peaP1: 100,
+            perP1: 50,
+            bitstackP1: 20,
+            lepP1: 100,
+            peaP2: 50,
+            perP2: 0,
+            bitstackP2: 0,
+            lepP2: 0,
+            objectifResteAVivreP1: 100,
+            objectifResteAVivreP2: 100
+        };
+
+        let abonnementsP1 = [
+            { nom: 'Netflix P1', montant: 13.49 }
+        ];
+
+        let abonnementsP2 = [
+            { nom: 'Spotify P2', montant: 10.99 }
+        ];
+
+        let comptesDispoP1 = [
+            { nom: 'Compte Courant Boursorama P1', solde: 300, rendement: 0, versementMensuel: 0 },
+            { nom: 'Livret A P1', solde: 1500, rendement: 1.7, versementMensuel: 100 }
+        ];
+
+        let comptesDispoP2 = [
+            { nom: 'Compte Courant P2', solde: 250, rendement: 0, versementMensuel: 0 },
+            { nom: 'Livret A P2', solde: 1200, rendement: 1.7, versementMensuel: 50 }
+        ];
+
+        let placementsBloquesP1 = [
+            { nom: 'PEA P1', solde: 2150, rendement: 7.5, versementMensuel: 100 },
+            { nom: 'PER P1', solde: 1700, rendement: 5.0, versementMensuel: 50 }
+        ];
+
+        let placementsBloquesP2 = [
+            { nom: 'PEA P2', solde: 1000, rendement: 7.0, versementMensuel: 50 }
+        ];
+
+        let patrimoineSupplementaireP1 = [
+            { nom: 'Véhicule P1', valeur: 3000 }
+        ];
+
+        let patrimoineSupplementaireP2 = [
+            { nom: 'Matériel Info P2', valeur: 1500 }
+        ];
+
+        function changerTheme(themeNom) {
+            document.body.classList.remove('theme-blanc', 'theme-dark', 'theme-mystery');
+            if (themeNom !== 'default') {
+                document.body.classList.add('theme-' + themeNom);
+            }
+            localStorage.setItem('appBankRpgThemeColoc', themeNom);
+        }
+
+        function changerMode(nouveauMode) {
+            modeActuel = nouveauMode;
+            render();
+        }
+
+        function changerStatutFoyer(nouveauStatut) {
+            if (nouveauStatut === 'celibataire') {
+                window.location.href = 'index.html';
+                return;
+            }
+            if (nouveauStatut === 'couple') {
+                window.location.href = 'gemini-code-1786357517590.html';
+                return;
+            }
+        }
+
+        function resetField(fieldName) {
+            if (cfg.hasOwnProperty(fieldName)) {
+                cfg[fieldName] = 0;
+            }
+            render();
+        }
+
+        function ajouterAbonnement(colocataire) {
+            if(colocataire === 2) {
+                abonnementsP2.push({ nom: 'Nouvel Abo P2', montant: 10.00 });
+            } else {
+                abonnementsP1.push({ nom: 'Nouvel Abo P1', montant: 10.00 });
+            }
+            render();
+        }
+
+        function supprimerAbonnement(index, colocataire) {
+            if(colocataire === 2) {
+                abonnementsP2.splice(index, 1);
+            } else {
+                abonnementsP1.splice(index, 1);
+            }
+            render();
+        }
+
+        function ajouterCompteDispo(colocataire) {
+            if(colocataire === 2) {
+                comptesDispoP2.push({ nom: 'Nouveau Compte P2', solde: 0, rendement: 0, versementMensuel: 0 });
+            } else {
+                comptesDispoP1.push({ nom: 'Nouveau Compte P1', solde: 0, rendement: 0, versementMensuel: 0 });
+            }
+            render();
+        }
+
+        function supprimerCompteDispo(index, colocataire) {
+            if(colocataire === 2) {
+                comptesDispoP2.splice(index, 1);
+            } else {
+                comptesDispoP1.splice(index, 1);
+            }
+            render();
+        }
+
+        function ajouterPlacementBloque(colocataire) {
+            if(colocataire === 2) {
+                placementsBloquesP2.push({ nom: 'Nouveau Placement P2', solde: 0, rendement: 5.0, versementMensuel: 0 });
+            } else {
+                placementsBloquesP1.push({ nom: 'Nouveau Placement P1', solde: 0, rendement: 5.0, versementMensuel: 0 });
+            }
+            render();
+        }
+
+        function supprimerPlacementBloque(index, colocataire) {
+            if(colocataire === 2) {
+                placementsBloquesP2.splice(index, 1);
+            } else {
+                placementsBloquesP1.splice(index, 1);
+            }
+            render();
+        }
+
+        function ajouterLignePatrimoineSupp(colocataire) {
+            if(colocataire === 2) {
+                patrimoineSupplementaireP2.push({ nom: 'Nouvel Actif P2', valeur: 0 });
+            } else {
+                patrimoineSupplementaireP1.push({ nom: 'Nouvel Actif P1', valeur: 0 });
+            }
+            render();
+        }
+
+        function supprimerLignePatrimoineSupp(index, colocataire) {
+            if(colocataire === 2) {
+                patrimoineSupplementaireP2.splice(index, 1);
+            } else {
+                patrimoineSupplementaireP1.splice(index, 1);
+            }
+            render();
+        }
+
+        function synchroniserDonneesDynamiques() {
+            document.querySelectorAll('#table-abos-p1 tr.row-abo-p1').forEach((row, i) => {
+                if (abonnementsP1[i]) {
+                    abonnementsP1[i].nom = row.querySelector('.inp-abo-nom').value;
+                    abonnementsP1[i].montant = parseFloat(row.querySelector('.inp-abo-val').value) || 0;
+                }
+            });
+            document.querySelectorAll('#table-abos-p2 tr.row-abo-p2').forEach((row, i) => {
+                if (abonnementsP2[i]) {
+                    abonnementsP2[i].nom = row.querySelector('.inp-abo-nom').value;
+                    abonnementsP2[i].montant = parseFloat(row.querySelector('.inp-abo-val').value) || 0;
+                }
+            });
+
+            document.querySelectorAll('#table-dispo-p1 tr.row-dispo-p1').forEach((row, i) => {
+                if (comptesDispoP1[i]) {
+                    comptesDispoP1[i].nom = row.querySelector('.inp-nom').value;
+                    comptesDispoP1[i].solde = parseFloat(row.querySelector('.inp-solde').value) || 0;
+                    comptesDispoP1[i].versementMensuel = parseFloat(row.querySelector('.inp-versement').value) || 0;
+                    comptesDispoP1[i].rendement = parseFloat(row.querySelector('.inp-rendement').value) || 0;
+                }
+            });
+            document.querySelectorAll('#table-dispo-p2 tr.row-dispo-p2').forEach((row, i) => {
+                if (comptesDispoP2[i]) {
+                    comptesDispoP2[i].nom = row.querySelector('.inp-nom').value;
+                    comptesDispoP2[i].solde = parseFloat(row.querySelector('.inp-solde').value) || 0;
+                    comptesDispoP2[i].versementMensuel = parseFloat(row.querySelector('.inp-versement').value) || 0;
+                    comptesDispoP2[i].rendement = parseFloat(row.querySelector('.inp-rendement').value) || 0;
+                }
+            });
+
+            document.querySelectorAll('#table-bloque-p1 tr.row-bloque-p1').forEach((row, i) => {
+                if (placementsBloquesP1[i]) {
+                    placementsBloquesP1[i].nom = row.querySelector('.inp-nom').value;
+                    placementsBloquesP1[i].solde = parseFloat(row.querySelector('.inp-solde').value) || 0;
+                    placementsBloquesP1[i].versementMensuel = parseFloat(row.querySelector('.inp-versement').value) || 0;
+                    placementsBloquesP1[i].rendement = parseFloat(row.querySelector('.inp-rendement').value) || 0;
+                }
+            });
+            document.querySelectorAll('#table-bloque-p2 tr.row-bloque-p2').forEach((row, i) => {
+                if (placementsBloquesP2[i]) {
+                    placementsBloquesP2[i].nom = row.querySelector('.inp-nom').value;
+                    placementsBloquesP2[i].solde = parseFloat(row.querySelector('.inp-solde').value) || 0;
+                    placementsBloquesP2[i].versementMensuel = parseFloat(row.querySelector('.inp-versement').value) || 0;
+                    placementsBloquesP2[i].rendement = parseFloat(row.querySelector('.inp-rendement').value) || 0;
+                }
+            });
+
+            document.querySelectorAll('#table-patsupp-p1 tr.row-patsupp-p1').forEach((row, i) => {
+                if (patrimoineSupplementaireP1[i]) {
+                    patrimoineSupplementaireP1[i].nom = row.querySelector('.inp-patsupp-nom').value;
+                    patrimoineSupplementaireP1[i].valeur = parseFloat(row.querySelector('.inp-patsupp-val').value) || 0;
+                }
+            });
+            document.querySelectorAll('#table-patsupp-p2 tr.row-patsupp-p2').forEach((row, i) => {
+                if (patrimoineSupplementaireP2[i]) {
+                    patrimoineSupplementaireP2[i].nom = row.querySelector('.inp-patsupp-nom').value;
+                    patrimoineSupplementaireP2[i].valeur = parseFloat(row.querySelector('.inp-patsupp-val').value) || 0;
+                }
+            });
+        }
+
+        function sauvegarderFormulaire(event) {
+            if(event) event.preventDefault();
+            synchroniserDonneesDynamiques();
+
+            document.querySelectorAll('.form-section-card input').forEach(input => {
+                const name = input.name;
+                if (cfg.hasOwnProperty(name)) {
+                    cfg[name] = parseFloat(input.value) || 0;
+                }
+            });
+
+            const brutTotalP1 = cfg.salaireBrutP1 + cfg.primeAncienneteP1;
+            cfg.salaireNetP1 = (brutTotalP1 * 0.78) * (1 - (cfg.tauxPasP1 / 100));
+
+            const brutTotalP2 = cfg.salaireBrutP2 + cfg.primeAncienneteP2;
+            cfg.salaireNetP2 = (brutTotalP2 * 0.78) * (1 - (cfg.tauxPasP2 / 100));
+
+            render();
+        }
+
+        function render() {
+            if (cfg.salaireNetP1 === 0) {
+                cfg.salaireNetP1 = ((cfg.salaireBrutP1 + cfg.primeAncienneteP1) * 0.78) * (1 - (cfg.tauxPasP1 / 100));
+            }
+            if (cfg.salaireNetP2 === 0) {
+                cfg.salaireNetP2 = ((cfg.salaireBrutP2 + cfg.primeAncienneteP2) * 0.78) * (1 - (cfg.tauxPasP2 / 100));
+            }
+
+            document.querySelectorAll('.main-tabs-container button').forEach(b => b.classList.remove('active'));
+            if(document.getElementById(`btn-${modeActuel}`)) {
+                document.getElementById(`btn-${modeActuel}`).classList.add('active');
+            }
+
+            const content = document.getElementById('app-content');
+            const makeInput = (name, val) => `
+                <div class="input-wrapper">
+                    <input type="number" step="any" name="${name}" value="${val}">
+                    <button type="button" class="reset-btn" onclick="resetField('${name}')" title="Mettre à zéro">✖</button>
+                </div>
+            `;
+
+            let tablePatSuppP1Html = '';
+            patrimoineSupplementaireP1.forEach((item, index) => {
+                tablePatSuppP1Html += `<tr class="row-patsupp-p1">
+                    <td><input type="text" value="${item.nom}" class="inp-patsupp-nom" style="background:var(--input-bg); border:1px solid var(--border-color); color:var(--text-main); padding:4px; width:100%;"></td>
+                    <td><input type="number" step="any" value="${item.valeur}" class="inp-patsupp-val" style="background:var(--input-bg); border:1px solid var(--border-color); color:var(--text-main); padding:4px; width:100%;"></td>
+                    <td><button type="button" class="del-btn" onclick="supprimerLignePatrimoineSupp(${index}, 1)">Supprimer</button></td>
+                </tr>`;
+            });
+
+            let tablePatSuppP2Html = '';
+            patrimoineSupplementaireP2.forEach((item, index) => {
+                tablePatSuppP2Html += `<tr class="row-patsupp-p2">
+                    <td><input type="text" value="${item.nom}" class="inp-patsupp-nom" style="background:var(--input-bg); border:1px solid #7f1d1d; color:var(--text-main); padding:4px; width:100%;"></td>
+                    <td><input type="number" step="any" value="${item.valeur}" class="inp-patsupp-val" style="background:var(--input-bg); border:1px solid #7f1d1d; color:var(--text-main); padding:4px; width:100%;"></td>
+                    <td><button type="button" class="del-btn" onclick="supprimerLignePatrimoineSupp(${index}, 2)">Supprimer</button></td>
+                </tr>`;
+            });
+
+            let formHtml = `
+                <form onsubmit="sauvegarderFormulaire(event)">
+                    <div class="form-section-card">
+                        <div class="form-section-title">💶 1. Revenus Colocataire 1 (P1)</div>
+                        <div class="form-grid-inner">
+                            <div class="form-group"><label>Salaire Brut P1 (€)</label>${makeInput('salaireBrutP1', cfg.salaireBrutP1)}</div>
+                            <div class="form-group"><label>Prime d'ancienneté P1 (€)</label>${makeInput('primeAncienneteP1', cfg.primeAncienneteP1)}</div>
+                            <div class="form-group"><label>Prélèvement à la source P1 (%)</label>${makeInput('tauxPasP1', cfg.tauxPasP1)}</div>
+                            <div class="form-group"><label>Salaire Net P1 (Calculé)</label><div class="input-wrapper"><input type="number" value="${cfg.salaireNetP1.toFixed(2)}" readonly style="color:#4ade80;"></div></div>
+                        </div>
+                        <button type="submit" class="action-btn">Valider</button>
+                    </div>
+
+                    <div class="form-section-card coloc2-card">
+                        <div class="form-section-title">💶 1.bis Revenus Colocataire 2 (P2)</div>
+                        <div class="form-grid-inner">
+                            <div class="form-group"><label>Salaire Brut P2 (€)</label>${makeInput('salaireBrutP2', cfg.salaireBrutP2)}</div>
+                            <div class="form-group"><label>Prime d'ancienneté P2 (€)</label>${makeInput('primeAncienneteP2', cfg.primeAncienneteP2)}</div>
+                            <div class="form-group"><label>Prélèvement à la source P2 (%)</label>${makeInput('tauxPasP2', cfg.tauxPasP2)}</div>
+                            <div class="form-group"><label>Salaire Net P2 (Calculé)</label><div class="input-wrapper"><input type="number" value="${cfg.salaireNetP2.toFixed(2)}" readonly style="color:#4ade80;"></div></div>
+                        </div>
+                        <button type="submit" class="action-btn p2-btn">Valider</button>
+                    </div>
+
+                    <div class="form-section-card">
+                        <div class="form-section-title">🛒 2. Charges & Vie Quotidienne - Colocataire 1 (P1)</div>
+                        <div class="form-grid-inner">
+                            <div class="form-group"><label>Loyer P1 (€)</label>${makeInput('loyerP1', cfg.loyerP1)}</div>
+                            <div class="form-group"><label>Internet P1 (€)</label>${makeInput('internetP1', cfg.internetP1)}</div>
+                            <div class="form-group"><label>Transport P1 (€)</label>${makeInput('transportP1', cfg.transportP1)}</div>
+                            <div class="form-group"><label>Courses P1 (€)</label>${makeInput('coursesP1', cfg.coursesP1)}</div>
+                            <div class="form-group"><label>Loisirs P1 (€)</label>${makeInput('loisirsP1', cfg.loisirsP1)}</div>
+                        </div>
+                        <button type="submit" class="action-btn">Valider</button>
+                    </div>
+
+                    <div class="form-section-card coloc2-card">
+                        <div class="form-section-title">🛒 2.bis Charges & Vie Quotidienne - Colocataire 2 (P2)</div>
+                        <div class="form-grid-inner">
+                            <div class="form-group"><label>Loyer P2 (€)</label>${makeInput('loyerP2', cfg.loyerP2)}</div>
+                            <div class="form-group"><label>Internet P2 (€)</label>${makeInput('internetP2', cfg.internetP2)}</div>
+                            <div class="form-group"><label>Transport P2 (€)</label>${makeInput('transportP2', cfg.transportP2)}</div>
+                            <div class="form-group"><label>Courses P2 (€)</label>${makeInput('coursesP2', cfg.coursesP2)}</div>
+                            <div class="form-group"><label>Loisirs P2 (€)</label>${makeInput('loisirsP2', cfg.loisirsP2)}</div>
+                        </div>
+                        <button type="submit" class="action-btn p2-btn">Valider</button>
+                    </div>
+
+                    <div class="form-section-card">
+                        <div class="form-section-title">📈 3. Épargne & Investissements P1</div>
+                        <div class="form-grid-inner">
+                            <div class="form-group"><label>PEA P1 (€/mois)</label>${makeInput('peaP1', cfg.peaP1)}</div>
+                            <div class="form-group"><label>PER P1 (€/mois)</label>${makeInput('perP1', cfg.perP1)}</div>
+                            <div class="form-group"><label>Bitstack P1 (€/mois)</label>${makeInput('bitstackP1', cfg.bitstackP1)}</div>
+                            <div class="form-group"><label>LEP P1 (€/mois)</label>${makeInput('lepP1', cfg.lepP1)}</div>
+                        </div>
+                        <button type="submit" class="action-btn">Valider</button>
+                    </div>
+
+                    <div class="form-section-card coloc2-card">
+                        <div class="form-section-title">📈 3.bis Épargne & Investissements P2</div>
+                        <div class="form-grid-inner">
+                            <div class="form-group"><label>PEA P2 (€/mois)</label>${makeInput('peaP2', cfg.peaP2)}</div>
+                            <div class="form-group"><label>PER P2 (€/mois)</label>${makeInput('perP2', cfg.perP2)}</div>
+                            <div class="form-group"><label>Bitstack P2 (€/mois)</label>${makeInput('bitstackP2', cfg.bitstackP2)}</div>
+                            <div class="form-group"><label>LEP P2 (€/mois)</label>${makeInput('lepP2', cfg.lepP2)}</div>
+                        </div>
+                        <button type="submit" class="action-btn p2-btn">Valider</button>
+                    </div>
+
+                    <div class="form-section-card">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <span style="color:var(--text-title); font-weight:bold; font-size:13px;">🎁 4. Actifs & Patrimoine P1</span>
+                            <button type="button" class="action-btn" onclick="ajouterLignePatrimoineSupp(1)" style="margin:0; padding:4px 8px; font-size:11px;">+ Actif P1</button>
+                        </div>
+                        <table id="table-patsupp-p1" style="margin:0;">
+                            <tr><th>Nom / Description</th><th>Valeur (€)</th><th>Action</th></tr>
+                            ${tablePatSuppP1Html}
+                        </table>
+                        <button type="submit" class="action-btn">Valider</button>
+                    </div>
+
+                    <div class="form-section-card coloc2-card">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <span style="color:#f87171; font-weight:bold; font-size:13px;">🎁 4.bis Actifs & Patrimoine P2</span>
+                            <button type="button" class="action-btn p2-btn" onclick="ajouterLignePatrimoineSupp(2)" style="margin:0; padding:4px 8px; font-size:11px;">+ Actif P2</button>
+                        </div>
+                        <table id="table-patsupp-p2" style="margin:0;">
+                            <tr><th>Nom / Description</th><th>Valeur (€)</th><th>Action</th></tr>
+                            ${tablePatSuppP2Html}
+                        </table>
+                        <button type="submit" class="action-btn p2-btn">Valider</button>
+                    </div>
+
+                    <!-- Abonnements P1 -->
+                    <div style="background:var(--card-bg); padding:12px; border-radius:6px; margin-bottom:15px; border:1px solid var(--border-color);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <span style="color:var(--text-title); font-weight:bold; font-size:13px;">Abonnements P1</span>
+                            <button type="button" class="action-btn" onclick="ajouterAbonnement(1)" style="margin:0; padding:4px 8px; font-size:11px;">+ Ajouter</button>
+                        </div>
+                        <table id="table-abos-p1" style="margin:0;">
+                            <tr><th>Libellé</th><th>Montant (€ / mois)</th><th>Action</th></tr>`;
+            abonnementsP1.forEach((abo, index) => {
+                formHtml += `<tr class="row-abo-p1">
+                    <td><input type="text" value="${abo.nom}" class="inp-abo-nom" style="background:var(--input-bg); border:1px solid var(--border-color); color:var(--text-main); padding:4px; width:100%;"></td>
+                    <td><input type="number" step="any" value="${abo.montant}" class="inp-abo-val" style="background:var(--input-bg); border:1px solid var(--border-color); color:var(--text-main); padding:4px; width:100%;"></td>
+                    <td><button type="button" class="del-btn" onclick="supprimerAbonnement(${index}, 1)">Supprimer</button></td>
+                </tr>`;
+            });
+            formHtml += `</table></div>`;
+
+            // Abonnements P2
+            formHtml += `<div style="background:var(--card-bg); padding:12px; border-radius:6px; margin-bottom:15px; border:1px solid #7f1d1d;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <span style="color:#f87171; font-weight:bold; font-size:13px;">Abonnements P2</span>
+                            <button type="button" class="action-btn p2-btn" onclick="ajouterAbonnement(2)" style="margin:0; padding:4px 8px; font-size:11px;">+ Ajouter P2</button>
+                        </div>
+                        <table id="table-abos-p2" style="margin:0;">
+                            <tr><th>Libellé</th><th>Montant (€ / mois)</th><th>Action</th></tr>`;
+            abonnementsP2.forEach((abo, index) => {
+                formHtml += `<tr class="row-abo-p2">
+                    <td><input type="text" value="${abo.nom}" class="inp-abo-nom" style="background:var(--input-bg); border:1px solid #7f1d1d; color:var(--text-main); padding:4px; width:100%;"></td>
+                    <td><input type="number" step="any" value="${abo.montant}" class="inp-abo-val" style="background:var(--input-bg); border:1px solid #7f1d1d; color:var(--text-main); padding:4px; width:100%;"></td>
+                    <td><button type="button" class="del-btn" onclick="supprimerAbonnement(${index}, 2)">Supprimer</button></td>
+                </tr>`;
+            });
+            formHtml += `</table></div>
+
+                    <button type="submit" class="action-btn">Mettre à jour le budget</button>
+                </form>
+            `;
+
+            let totalAbosP1 = abonnementsP1.reduce((acc, a) => acc + a.montant, 0);
+            let totalAbosP2 = abonnementsP2.reduce((acc, a) => acc + a.montant, 0);
+
+            let totalDepensesP1 = cfg.loyerP1 + cfg.internetP1 + cfg.transportP1 + cfg.coursesP1 + cfg.loisirsP1 + cfg.peaP1 + cfg.perP1 + cfg.bitstackP1 + cfg.lepP1 + totalAbosP1;
+            let totalDepensesP2 = cfg.loyerP2 + cfg.internetP2 + cfg.transportP2 + cfg.coursesP2 + cfg.loisirsP2 + cfg.peaP2 + cfg.perP2 + cfg.bitstackP2 + cfg.lepP2 + totalAbosP2;
+
+            let resteP1 = cfg.salaireNetP1 - totalDepensesP1;
+            let resteP2 = cfg.salaireNetP2 - totalDepensesP2;
+
+            const getResteStyle = (val) => {
+                let isOk = val >= 0;
+                let bg = isOk ? 'rgba(74, 222, 128, 0.15)' : 'rgba(239, 68, 68, 0.15)';
+                let color = isOk ? '#4ade80' : '#ef4444';
+                return `background:${bg}; color:${color}; font-size:1.1em; font-weight:900; border: 2px solid ${color};`;
+            };
+
+            let tableauFluxHtml = `
+                <div class="table-layout-container">
+                    <div>
+                        <table>
+                            <thead>
+                                <tr style="background:var(--table-header); text-align:left;">
+                                    <th>Flux Financiers (Colocataires Indépendants)</th>
+                                    <th>Colocataire 1 (P1)</th>
+                                    <th>Colocataire 2 (P2)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><b>SALAIRES NETS MENSUELS</b></td>
+                                    <td style="color:#4ade80">+${cfg.salaireNetP1.toFixed(2)} €</td>
+                                    <td style="color:#4ade80">+${cfg.salaireNetP2.toFixed(2)} €</td>
+                                </tr>
+                                <tr style="background:var(--table-header);"><td colspan="3"><b>1. LOGEMENT & CHARGES FIXES</b></td></tr>
+                                <tr><td>Loyer</td><td>-${cfg.loyerP1.toFixed(2)} €</td><td>-${cfg.loyerP2.toFixed(2)} €</td></tr>
+                                <tr><td>Internet</td><td>-${cfg.internetP1.toFixed(2)} €</td><td>-${cfg.internetP2.toFixed(2)} €</td></tr>
+                                <tr><td>Transport</td><td>-${cfg.transportP1.toFixed(2)} €</td><td>-${cfg.transportP2.toFixed(2)} €</td></tr>
+                                
+                                <tr style="background:var(--table-header);"><td colspan="3"><b>2. ÉPARGNE & INVESTISSEMENTS</b></td></tr>
+                                <tr><td>PEA</td><td>-${cfg.peaP1.toFixed(2)} €</td><td>-${cfg.peaP2.toFixed(2)} €</td></tr>
+                                <tr><td>PER</td><td>-${cfg.perP1.toFixed(2)} €</td><td>-${cfg.perP2.toFixed(2)} €</td></tr>
+                                <tr><td>Bitstack</td><td>-${cfg.bitstackP1.toFixed(2)} €</td><td>-${cfg.bitstackP2.toFixed(2)} €</td></tr>
+                                <tr><td>LEP</td><td>-${cfg.lepP1.toFixed(2)} €</td><td>-${cfg.lepP2.toFixed(2)} €</td></tr>
+
+                                <tr style="background:var(--table-header);"><td colspan="3"><b>3. VIE QUOTIDIENNE & LOISIRS</b></td></tr>
+                                <tr><td>Courses / Alimentation</td><td>-${cfg.coursesP1.toFixed(2)} €</td><td>-${cfg.coursesP2.toFixed(2)} €</td></tr>
+                                <tr><td>Loisirs / Sorties</td><td>-${cfg.loisirsP1.toFixed(2)} €</td><td>-${cfg.loisirsP2.toFixed(2)} €</td></tr>
+                                <tr><td>Abonnements</td><td>-${totalAbosP1.toFixed(2)} €</td><td>-${totalAbosP2.toFixed(2)} €</td></tr>
+
+                                <tr style="border-top:2px solid var(--border-color); font-weight:bold;">
+                                    <td>(=) RESTE À VIVRE MENSUEL</td>
+                                    <td style="${getResteStyle(resteP1)}">${resteP1.toFixed(2)} €</td>
+                                    <td style="${getResteStyle(resteP2)}">${resteP2.toFixed(2)} €</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+
+            let projetHtml = '';
+            if (modeActuel === 'projet' || modeActuel === 'ia') {
+                let totalDispoP1 = comptesDispoP1.reduce((acc, c) => acc + c.solde, 0);
+                let totalDispoP2 = comptesDispoP2.reduce((acc, c) => acc + c.solde, 0);
+                let totalBloqueP1 = placementsBloquesP1.reduce((acc, p) => acc + p.solde, 0);
+                let totalBloqueP2 = placementsBloquesP2.reduce((acc, p) => acc + p.solde, 0);
+                let totalPatSuppP1 = patrimoineSupplementaireP1.reduce((acc, item) => acc + item.valeur, 0);
+                let totalPatSuppP2 = patrimoineSupplementaireP2.reduce((acc, item) => acc + item.valeur, 0);
+
+                let patrimoineTotalP1 = totalDispoP1 + totalBloqueP1 + totalPatSuppP1;
+                let patrimoineTotalP2 = totalDispoP2 + totalBloqueP2 + totalPatSuppP2;
+
+                let tableDispoP1Html = '';
+                comptesDispoP1.forEach((c, index) => {
+                    tableDispoP1Html += `<tr class="row-dispo-p1">
+                        <td><input type="text" value="${c.nom}" class="inp-nom" style="background:var(--input-bg); border:1px solid var(--border-color); color:var(--text-main); padding:4px; width:100%;"></td>
+                        <td><input type="number" step="any" value="${c.solde}" class="inp-solde" style="background:var(--input-bg); border:1px solid var(--border-color); color:var(--text-main); padding:4px; width:100%;"></td>
+                        <td><input type="number" step="any" value="${c.versementMensuel}" class="inp-versement" style="background:var(--input-bg); border:1px solid var(--border-color); color:var(--text-main); padding:4px; width:100%;"></td>
+                        <td><input type="number" step="any" value="${c.rendement}" class="inp-rendement" style="background:var(--input-bg); border:1px solid var(--border-color); color:var(--text-main); padding:4px; width:60px;"> %</td>
+                        <td><button type="button" class="del-btn" onclick="supprimerCompteDispo(${index}, 1)">Supprimer</button></td>
+                    </tr>`;
+                });
+
+                let tableDispoP2Html = '';
+                comptesDispoP2.forEach((c, index) => {
+                    tableDispoP2Html += `<tr class="row-dispo-p2">
+                        <td><input type="text" value="${c.nom}" class="inp-nom" style="background:var(--input-bg); border:1px solid #7f1d1d; color:var(--text-main); padding:4px; width:100%;"></td>
+                        <td><input type="number" step="any" value="${c.solde}" class="inp-solde" style="background:var(--input-bg); border:1px solid #7f1d1d; color:var(--text-main); padding:4px; width:100%;"></td>
+                        <td><input type="number" step="any" value="${c.versementMensuel}" class="inp-versement" style="background:var(--input-bg); border:1px solid #7f1d1d; color:var(--text-main); padding:4px; width:100%;"></td>
+                        <td><input type="number" step="any" value="${c.rendement}" class="inp-rendement" style="background:var(--input-bg); border:1px solid #7f1d1d; color:var(--text-main); padding:4px; width:60px;"> %</td>
+                        <td><button type="button" class="del-btn" onclick="supprimerCompteDispo(${index}, 2)">Supprimer</button></td>
+                    </tr>`;
+                });
+
+                let tableBloqueP1Html = '';
+                placementsBloquesP1.forEach((p, index) => {
+                    tableBloqueP1Html += `<tr class="row-bloque-p1">
+                        <td><input type="text" value="${p.nom}" class="inp-nom" style="background:var(--input-bg); border:1px solid var(--border-color); color:var(--text-main); padding:4px; width:100%;"></td>
+                        <td><input type="number" step="any" value="${p.solde}" class="inp-solde" style="background:var(--input-bg); border:1px solid var(--border-color); color:var(--text-main); padding:4px; width:100%;"></td>
+                        <td><input type="number" step="any" value="${p.versementMensuel}" class="inp-versement" style="background:var(--input-bg); border:1px solid var(--border-color); color:var(--text-main); padding:4px; width:100%;"></td>
+                        <td><input type="number" step="any" value="${p.rendement}" class="inp-rendement" style="background:var(--input-bg); border:1px solid var(--border-color); color:var(--text-main); padding:4px; width:60px;"> %</td>
+                        <td><button type="button" class="del-btn" onclick="supprimerPlacementBloque(${index}, 1)">Supprimer</button></td>
+                    </tr>`;
+                });
+
+                let tableBloqueP2Html = '';
+                placementsBloquesP2.forEach((p, index) => {
+                    tableBloqueP2Html += `<tr class="row-bloque-p2">
+                        <td><input type="text" value="${p.nom}" class="inp-nom" style="background:var(--input-bg); border:1px solid #7f1d1d; color:var(--text-main); padding:4px; width:100%;"></td>
+                        <td><input type="number" step="any" value="${p.solde}" class="inp-solde" style="background:var(--input-bg); border:1px solid #7f1d1d; color:var(--text-main); padding:4px; width:100%;"></td>
+                        <td><input type="number" step="any" value="${p.versementMensuel}" class="inp-versement" style="background:var(--input-bg); border:1px solid #7f1d1d; color:var(--text-main); padding:4px; width:100%;"></td>
+                        <td><input type="number" step="any" value="${p.rendement}" class="inp-rendement" style="background:var(--input-bg); border:1px solid #7f1d1d; color:var(--text-main); padding:4px; width:60px;"> %</td>
+                        <td><button type="button" class="del-btn" onclick="supprimerPlacementBloque(${index}, 2)">Supprimer</button></td>
+                    </tr>`;
+                });
+
+                projetHtml = `
+                    <div class="card" style="border: 2px solid var(--text-title); background: var(--card-bg);">
+                        <h2 style="margin-top:0; color:var(--text-title); text-transform:uppercase; text-align:center; font-size: 1.2rem;">PATRIMOINE INDÉPENDANT DES COLOCATAIRES</h2>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                            <div style="background:var(--input-bg); padding:15px; border-radius:6px; border:2px solid var(--text-title); text-align:center;">
+                                <div style="font-size:12px; color:var(--text-main); text-transform:uppercase; font-weight:bold;">Patrimoine Colocataire 1 (P1)</div>
+                                <div style="font-size: 26px; font-weight: 900; color: #4ade80; margin: 8px 0;">${patrimoineTotalP1.toFixed(2)} €</div>
+                                <div style="font-size: 11px; color: var(--text-main); opacity: 0.8;">Dispo: ${totalDispoP1.toFixed(0)}€ | Bloqué: ${totalBloqueP1.toFixed(0)}€ | Actifs: ${totalPatSuppP1.toFixed(0)}€</div>
+                            </div>
+                            <div style="background:var(--input-bg); padding:15px; border-radius:6px; border:2px solid #f87171; text-align:center;">
+                                <div style="font-size:12px; color:#fca5a5; text-transform:uppercase; font-weight:bold;">Patrimoine Colocataire 2 (P2)</div>
+                                <div style="font-size: 26px; font-weight: 900; color: #4ade80; margin: 8px 0;">${patrimoineTotalP2.toFixed(2)} €</div>
+                                <div style="font-size: 11px; color: var(--text-main); opacity: 0.8;">Dispo: ${totalDispoP2.toFixed(0)}€ | Bloqué: ${totalBloqueP2.toFixed(0)}€ | Actifs: ${totalPatSuppP2.toFixed(0)}€</div>
+                            </div>
+                        </div>
+
+                        <h3 style="color:var(--text-title); font-size:1rem;">Comptes & Placements P1</h3>
+                        <div style="margin-bottom: 15px; overflow-x: auto;">
+                            <table id="table-dispo-p1">
+                                <tr><th>Compte P1</th><th>Solde (€)</th><th>Versement (€/m)</th><th>Rendement (%)</th><th>Action</th></tr>
+                                ${tableDispoP1Html}
+                            </table>
+                            <button type="button" class="action-btn" onclick="ajouterCompteDispo(1)" style="margin-top:5px; font-size:11px;">+ Ajouter Compte P1</button>
+                        </div>
+                        <div style="margin-bottom: 25px; overflow-x: auto;">
+                            <table id="table-bloque-p1">
+                                <tr><th>Placement Bloqué P1</th><th>Solde (€)</th><th>Versement (€/m)</th><th>Rendement (%)</th><th>Action</th></tr>
+                                ${tableBloqueP1Html}
+                            </table>
+                            <button type="button" class="action-btn" onclick="ajouterPlacementBloque(1)" style="margin-top:5px; font-size:11px;">+ Ajouter Placement P1</button>
+                        </div>
+
+                        <h3 style="color:#f87171; font-size:1.0rem;">Comptes & Placements P2</h3>
+                        <div style="margin-bottom: 15px; overflow-x: auto;">
+                            <table id="table-dispo-p2">
+                                <tr><th>Compte P2</th><th>Solde (€)</th><th>Versement (€/m)</th><th>Rendement (%)</th><th>Action</th></tr>
+                                ${tableDispoP2Html}
+                            </table>
+                            <button type="button" class="action-btn p2-btn" onclick="ajouterCompteDispo(2)" style="margin-top:5px; font-size:11px;">+ Ajouter Compte P2</button>
+                        </div>
+                        <div style="margin-bottom: 15px; overflow-x: auto;">
+                            <table id="table-bloque-p2">
+                                <tr><th>Placement Bloqué P2</th><th>Solde (€)</th><th>Versement (€/m)</th><th>Rendement (%)</th><th>Action</th></tr>
+                                ${tableBloqueP2Html}
+                            </table>
+                            <button type="button" class="action-btn p2-btn" onclick="ajouterPlacementBloque(2)" style="margin-top:5px; font-size:11px;">+ Ajouter Placement P2</button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (modeActuel === 'ia') {
+                projetHtml += `
+                    <div class="card" style="border:2px dashed var(--text-title); background:var(--card-bg); margin-top:15px;">
+                        <h3 style="margin-top:0; color:var(--text-title);">🤖 Smart AI Budget Optimizer - Mode Colocation</h3>
+                        <div style="font-size:13px; color:var(--text-main); opacity:0.9;">
+                            Chaque colocataire gère son budget de manière indépendante. Aucun compte ou investissement croisé n'interfère entre P1 et P2.
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (modeActuel === 'proprietaire') {
+                content.innerHTML = formHtml + tableauFluxHtml;
+            } else {
+                content.innerHTML = formHtml + projetHtml;
+            }
+        }
+
+        window.onload = function() {
+            let savedTheme = localStorage.getItem('appBankRpgThemeColoc') || 'default';
+            changerTheme(savedTheme);
+            render();
+        };
+    </script>
+</body>
+</html>
